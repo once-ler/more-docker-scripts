@@ -1,4 +1,4 @@
-FROM  dockerfile/mongodb:3.0.2
+FROM mongo:3.0.2
 MAINTAINER  Henry Tao "htaox@hotmail.com"
 
-RUN files /root/jsfiles
+ADD files /root/jsfiles
