@@ -1,10 +1,5 @@
 #!/bin/bash
 
-if [[ "$USER" != "root" ]]; then
-    echo "please run as: sudo $0"
-    exit 1
-fi
-
 CURDIR=$(pwd)
 BASEDIR=$(cd $(dirname $0); pwd)"/.."
 dir_list=( "mongodb-3.0.2" )
