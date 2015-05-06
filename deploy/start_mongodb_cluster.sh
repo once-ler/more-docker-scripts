@@ -16,7 +16,7 @@ WORKER_HOSTNAME=mongodb-node
 #done
 
 # Uncomment to build mongo image yourself otherwise it will download from docker index.
-#docker build -t htaox/mongodb-worker ${LOCALPATH}/mongo > /dev/null 2>&1
+#docker build -t htaox/mongodb-worker:3.0.2 ${LOCALPATH}/mongo > /dev/null 2>&1
 
 # Setup skydns/skydock
 # docker run -d -p $NAMESERVER_IP:53:53/udp --name skydns crosbymichael/skydns -nameserver 8.8.8.8:53 -domain docker
@@ -48,7 +48,7 @@ function start_workers() {
     echo "WORKER ${i} VOLUME_MAP => ${WORKER_VOLUME_MAP}"
 
     # Create mongd servers
-    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r1 -P -i -d -v ${WORKER_VOLUME_DIR}-1:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r1 -P -i -d -v ${WORKER_VOLUME_DIR}-1:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
     hostname=mongos${i}r1
     echo "Removing $hostname from $DNSFILE"
     sed -i "/$hostname/d" "$DNSFILE"
@@ -56,7 +56,7 @@ function start_workers() {
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
 
-    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r2 -P -i -d -v ${WORKER_VOLUME_DIR}-2:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r2 -P -i -d -v ${WORKER_VOLUME_DIR}-2:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
     hostname=mongos${i}r2
     echo "Removing $hostname from $DNSFILE"
     sed -i "/$hostname/d" "$DNSFILE"
@@ -64,16 +64,16 @@ function start_workers() {
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
 
-    sleep 20 # Wait for mongo to start
+    sleep 10 # Wait for mongo to start
     # Setup replica set
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker
-    sleep 30 # Waiting for set to be initiated
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    sleep 10 # Waiting for set to be initiated
 
     #update setupReplicaSet.js
-    docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker
+    docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
     
     # Create configserver
-    WORKER=$docker run --dns $NAMESERVER_IP --name mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
     hostname=mongos-configservers${i}
     echo "Removing $hostname from $DNSFILE"
     sed -i "/$hostname/d" "$DNSFILE"
@@ -92,8 +92,8 @@ function start_workers() {
     fi
   done
 
-  WORKER=$(docker run --dns $NAMESERVER_IP --name mongos1 -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker)
-  sleep 15 # Wait for mongo to start
+  WORKER=$(docker run --dns $NAMESERVER_IP --name mongos1 -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
+  sleep 10 # Wait for mongo to start
   hostname=mongos1
   echo "Removing $hostname from $DNSFILE"
   sed -i "/$hostname/d" "$DNSFILE"
@@ -101,13 +101,13 @@ function start_workers() {
   echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
   echo "$hostname IP: $WORKER_IP"
 
-  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker
-  sleep 15 # Wait for sharding to be enabled
-  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addDBs.js" htaox/mongodb-worker
-  sleep 15 # Wait for db to be created
-  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2)/admin /root/jsfiles/enabelSharding.js" htaox/mongodb-worker
-  sleep 15 # Wait sharding to be enabled
-  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addIndexes.js" htaox/mongodb-worker
+  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+  sleep 10 # Wait for sharding to be enabled
+  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
+  sleep 10 # Wait for db to be created
+  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2)/admin /root/jsfiles/enabelSharding.js" htaox/mongodb-worker:3.0.2
+  sleep 10 # Wait sharding to be enabled
+  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
