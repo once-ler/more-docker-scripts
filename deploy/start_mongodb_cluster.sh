@@ -69,7 +69,7 @@ function start_workers() {
     # sleep 10 # Wait for mongo to start
     # Setup replica set
     docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
-    sleep 10 # Waiting for set to be initiated
+    sleep 5 # Waiting for set to be initiated
 
     #update setupReplicaSet.js
     docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
@@ -96,7 +96,7 @@ function start_workers() {
   done
 
   WORKER=$(docker run --dns $NAMESERVER_IP --name mongos1 -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
-  sleep 10 # Wait for mongo to start
+  sleep 5 # Wait for mongo to start
   hostname=mongos1
   echo "Removing $hostname from $DNSFILE"
   sed -i "/$hostname/d" "$DNSFILE"
@@ -105,11 +105,11 @@ function start_workers() {
   echo "$hostname IP: $WORKER_IP"
 
   docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
-  sleep 10 # Wait for sharding to be enabled
+  sleep 5 # Wait for sharding to be enabled
   docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
-  sleep 10 # Wait for db to be created
+  sleep 5 # Wait for db to be created
   docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2)/admin /root/jsfiles/enabelSharding.js" htaox/mongodb-worker:3.0.2
-  sleep 10 # Wait sharding to be enabled
+  sleep 5 # Wait sharding to be enabled
   docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
 
   echo "#####################################"

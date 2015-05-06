@@ -10,7 +10,7 @@ then
   echo "Updating setupReplicaSet.js for ${WORKERNUM}" 
   # update setupReplicaSet.js
   sed -i "s/@WORKERNUM@/$WORKERNUM/g" /root/jsfiles/setupReplicaSet.js
-end
+fi
 
 # Start mongo and log
 /usr/bin/mongo$OPTIONS
