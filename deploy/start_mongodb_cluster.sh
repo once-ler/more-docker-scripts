@@ -45,10 +45,11 @@ function start_workers() {
       # volume will now be like /host/dir/data-1:/data if original volume was /home/dir/data
       # WORKER_VOLUME_MAP="-v ${WORKER_VOLUME_DIR}:${VOLUME_MAP_ARR[1]}"            
     fi
-    echo "WORKER ${i} VOLUME_MAP => ${WORKER_VOLUME_MAP}"
+    #echo "WORKER ${i} VOLUME_MAP => ${WORKER_VOLUME_MAP}"
 
     # Create mongd servers
     WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r1 -P -i -d -v ${WORKER_VOLUME_DIR}-1:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
+    sleep 3
     hostname=mongos${i}r1
     echo "Removing $hostname from $DNSFILE"
     sed -i "/$hostname/d" "$DNSFILE"
@@ -57,6 +58,7 @@ function start_workers() {
     echo "$hostname IP: $WORKER_IP"
 
     WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r2 -P -i -d -v ${WORKER_VOLUME_DIR}-2:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
+    sleep 3
     hostname=mongos${i}r2
     echo "Removing $hostname from $DNSFILE"
     sed -i "/$hostname/d" "$DNSFILE"
@@ -64,7 +66,7 @@ function start_workers() {
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
 
-    sleep 10 # Wait for mongo to start
+    # sleep 10 # Wait for mongo to start
     # Setup replica set
     docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
     sleep 10 # Waiting for set to be initiated
@@ -74,6 +76,7 @@ function start_workers() {
     
     # Create configserver
     WORKER=$(docker run --dns $NAMESERVER_IP --name mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
+    sleep 3
     hostname=mongos-configservers${i}
     echo "Removing $hostname from $DNSFILE"
     sed -i "/$hostname/d" "$DNSFILE"
