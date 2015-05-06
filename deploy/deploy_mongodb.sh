@@ -3,7 +3,7 @@
 DEBUG=0
 BASEDIR=$(cd $(dirname $0); pwd)
 
-mongodb_images=( "htaox/mongodb:0.90.13")
+mongodb_images=( "htaox/mongodb-base:3.0.2","htaox/mongodb-worker:3.0.2" )
 NAMESERVER_IMAGE="amplab/dnsmasq-precise"
 
 start_shell=0
@@ -74,22 +74,15 @@ function parse_options() {
 
 function check_mongodb() {
 
-    containers=($(sudo docker ps | grep mongodb-master | awk '{print $1}' | tr '\n' ' '))
-    NUM_ELASTIC_MASTER=$(echo ${#containers[@]})    
-    echo "There are $NUM_ELASTIC_MASTER mongodb servers running"
+    containers=($(sudo docker ps | grep mongodb-worker | awk '{print $1}' | tr '\n' ' '))
+    NUM_MONGODB_WORKER=$(echo ${#containers[@]})    
+    echo "There are $NUM_MONGODB_WORKER mongodb servers running"
 
 }
 
 function remove_stopped_containers() {
     sudo docker ps -a | grep mongodb | awk '{print $1}' | xargs --no-run-if-empty docker rm
 }
-
-check_root
-
-if [[ "$#" -eq 0 ]]; then
-    print_help
-    exit 1
-fi
 
 parse_options $@
 
@@ -105,16 +98,13 @@ check_start_nameserver $NAMESERVER_IMAGE
 
 check_mongodb
 
-if [ $NUM_ELASTIC_MASTER -gt 0 ]; then
+if [ $NUM_MONGODB_WORKER -gt 0 ]; then
     exit 0
 fi
 
 remove_stopped_containers
 
-start_master ${image_name}-master $image_version
-wait_for_master
-
 start_workers ${image_name}-worker $image_version
 sleep 3
+
 echo ""
-print_cluster_info
