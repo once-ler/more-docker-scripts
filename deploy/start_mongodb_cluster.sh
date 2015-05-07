@@ -22,8 +22,27 @@ WORKER_HOSTNAME=mongodb-node
 # docker run -d -p $NAMESERVER_IP:53:53/udp --name skydns crosbymichael/skydns -nameserver 8.8.8.8:53 -domain docker
 # docker run -d -v /var/run/docker.sock:/docker.sock --name skydock crosbymichael/skydock -ttl 30 -environment dev -s /docker.sock -domain docker -name skydns
 
-function start_workers() {
-  
+function initiateReplicatSets() {
+
+  for i in `seq 1 $NUM_WORKERS`; do
+
+    # sleep 10 # Wait for mongo to start
+    # Setup replica set
+    echo "Initiating replicat set"
+    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos${i}r1:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    sleep 5 # Waiting for set to be initiated
+
+    #update setupReplicaSet.js
+    echo "Updating replicat set"
+    #docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" mongos${i}r1:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
+
+  done
+}
+
+function createContainers() {
+
   # split the volume syntax by :, then use the array to build new volume map
   IFS=' ' read -ra VOLUME_MAP_ARR_PRE <<< "$VOLUME_MAP"
   IFS=':' read -ra VOLUME_MAP_ARR <<< "${VOLUME_MAP_ARR_PRE[1]}"
@@ -66,18 +85,6 @@ function start_workers() {
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
 
-    # sleep 10 # Wait for mongo to start
-    # Setup replica set
-    echo "Initiating replicat set"
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos${i}r1:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
-    sleep 5 # Waiting for set to be initiated
-
-    #update setupReplicaSet.js
-    echo "Updating replicat set"
-    #docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
-    docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" mongos${i}r1:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
-
     # Create configserver
     WORKER=$(docker run --dns $NAMESERVER_IP --name mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
     sleep 3
@@ -89,7 +96,9 @@ function start_workers() {
     echo "$hostname IP: $WORKER_IP"
    
   done
+}
 
+function configureRouter() {
   # Setup and configure mongo router
   CONFIG_DBS=""
   for i in `seq 1 $NUM_WORKERS`; do
@@ -128,6 +137,15 @@ function start_workers() {
   #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
   echo "Test indexes"
   docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
+}
+
+function start_workers() {
+  
+  createContainers  
+
+  initiateReplicatSets
+
+  configureRouter
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
