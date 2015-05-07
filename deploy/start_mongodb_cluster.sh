@@ -41,7 +41,22 @@ function initiateReplicatSets() {
   done
 }
 
-function createContainers() {
+function createConfigContainers() {
+  #should have exactly 3
+  # Create configserver
+  for i in `seq 1 3`; do
+    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
+    sleep 3
+    hostname=mongos-configservers${i}
+    echo "Removing $hostname from $DNSFILE"
+    sed -i "/$hostname/d" "$DNSFILE"
+    WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
+    echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
+    echo "$hostname IP: $WORKER_IP"
+  done
+}
+
+function createShardContainers() {
 
   # split the volume syntax by :, then use the array to build new volume map
   IFS=' ' read -ra VOLUME_MAP_ARR_PRE <<< "$VOLUME_MAP"
@@ -84,24 +99,14 @@ function createContainers() {
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
-
-    # Create configserver
-    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
-    sleep 3
-    hostname=mongos-configservers${i}
-    echo "Removing $hostname from $DNSFILE"
-    sed -i "/$hostname/d" "$DNSFILE"
-    WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
-    echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
-    echo "$hostname IP: $WORKER_IP"
    
   done
 }
 
-function configureRouter() {
+function createQueryRouterContainers() {
   # Setup and configure mongo router
   CONFIG_DBS=""
-  for i in `seq 1 $NUM_WORKERS`; do
+  for i in `seq 1 3`; do
     CONFIG_DBS="${CONFIG_DBS}mongos-configservers${i}:27017"
     if [ $i -lt $(($NUM_WORKERS-1)) ]; then
       CONFIG_DBS="${CONFIG_DBS},"
@@ -143,10 +148,15 @@ function configureRouter() {
 function start_workers() {
   
   echo "-------------------------------------"
-  echo "Creating containers"
+  echo "Creating Shard Containers"
   echo "-------------------------------------"
-  createContainers  
+  createShardContainers  
   
+  echo "-------------------------------------"
+  echo "Creating Config Containers"
+  echo "-------------------------------------"
+  createConfigContainers
+
   echo "-------------------------------------"
   echo "Initiating Replica Sets"
   echo "-------------------------------------"
@@ -154,9 +164,9 @@ function start_workers() {
   initiateReplicatSets
   
   echo "-------------------------------------"
-  echo "Configuring Router"
+  echo "Configuring Query Router Containers"
   echo "-------------------------------------"
-  configureRouter
+  createQueryRouterContainers
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
