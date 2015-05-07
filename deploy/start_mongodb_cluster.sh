@@ -5,6 +5,8 @@
 
 BASEDIR=$(cd $(dirname $0); pwd)
 
+declare -A hostmap
+
 function initiateReplicatSets() {
 
   for i in `seq 1 $NUM_WORKERS`; do
@@ -13,14 +15,14 @@ function initiateReplicatSets() {
     # Setup replica set
     echo "Initiating replicat set"
     #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos${i}r1:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${hostmap["mongos${i}r1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
     echo "Waiting for set to be initiated..."
-    sleep 20
+    sleep 10
 
     #update setupReplicaSet.js
     echo "Updating replicat set"
     #docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
-    docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" mongos${i}r1:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e SERVER1 ${hostmap["mongos${i}r1"]} -e SERVER2 ${hostmap["mongos${i}r2"]} -e OPTIONS=" ${hostmap["mongos${i}r1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
 
   done
 }
@@ -37,6 +39,7 @@ function createConfigContainers() {
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
+    hostmap[$hostname]=$WORKER_IP
   done
 }
 
@@ -60,11 +63,8 @@ function createShardContainers() {
       mkdir -p "${WORKER_VOLUME_DIR}-2"
       mkdir -p "${WORKER_VOLUME_DIR}-cfg"
       
-      # volume will now be like /host/dir/data-1:/data if original volume was /home/dir/data
-      # WORKER_VOLUME_MAP="-v ${WORKER_VOLUME_DIR}:${VOLUME_MAP_ARR[1]}"            
     fi
-    #echo "WORKER ${i} VOLUME_MAP => ${WORKER_VOLUME_MAP}"
-
+    
     # Create mongd servers
     WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r1 -P -i -d -v ${WORKER_VOLUME_DIR}-1:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
     sleep 10
@@ -74,7 +74,8 @@ function createShardContainers() {
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
-    
+    hostmap[$hostname]=$WORKER_IP
+
     WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r2 -P -i -d -v ${WORKER_VOLUME_DIR}-2:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
     sleep 10
     hostname=mongos${i}r2
@@ -83,6 +84,7 @@ function createShardContainers() {
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
+    hostmap[$hostname]=$WORKER_IP
    
   done
 }
@@ -91,7 +93,7 @@ function createQueryRouterContainers() {
   # Setup and configure mongo router
   CONFIG_DBS=""
   for i in `seq 1 3`; do
-    CONFIG_DBS="${CONFIG_DBS}mongos-configserver${i}:27017"
+    CONFIG_DBS="${CONFIG_DBS}${hostmap[mongos-configserver${i}]}:27017"
     if [ $i -lt $(($NUM_WORKERS-1)) ]; then
       CONFIG_DBS="${CONFIG_DBS},"
     fi
@@ -108,6 +110,7 @@ function createQueryRouterContainers() {
   WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
   echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
   echo "$hostname IP: $WORKER_IP"
+  hostmap[$hostname]=$WORKER_IP
 
   #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
   for i in `seq 1 $NUM_WORKERS`; do
