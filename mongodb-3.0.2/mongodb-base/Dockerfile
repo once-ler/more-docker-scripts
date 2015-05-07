@@ -1,7 +1,7 @@
 #FROM mongo:3.0.2
 
 # Pull base image.
-FROM ubuntu:precise
+FROM ubuntu:trusty
 MAINTAINER  Henry Tao "htaox@hotmail.com"
 
 # Install MongoDB.
