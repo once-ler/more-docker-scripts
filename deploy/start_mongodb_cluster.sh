@@ -68,7 +68,8 @@ function start_workers() {
 
     # sleep 10 # Wait for mongo to start
     # Setup replica set
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos${i}r1:27017 /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
     sleep 5 # Waiting for set to be initiated
 
     #update setupReplicaSet.js
