@@ -45,7 +45,7 @@ function createConfigContainers() {
   #should have exactly 3
   # Create configserver
   for i in `seq 1 3`; do
-    WORKER=$(docker run --dns $NAMESERVER_IP -h mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
     sleep 3
     hostname=mongos-configservers${i}
     echo "Removing $hostname from $DNSFILE"
@@ -82,7 +82,7 @@ function createShardContainers() {
     #echo "WORKER ${i} VOLUME_MAP => ${WORKER_VOLUME_MAP}"
 
     # Create mongd servers
-    WORKER=$(docker run --dns $NAMESERVER_IP -h mongos${i}r1 -P -i -d -v ${WORKER_VOLUME_DIR}-1:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r1 -P -i -d -v ${WORKER_VOLUME_DIR}-1:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
     sleep 3
     hostname=mongos${i}r1
     echo "Removing $hostname from $DNSFILE"
@@ -91,7 +91,7 @@ function createShardContainers() {
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
 
-    WORKER=$(docker run --dns $NAMESERVER_IP -h mongos${i}r2 -P -i -d -v ${WORKER_VOLUME_DIR}-2:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r2 -P -i -d -v ${WORKER_VOLUME_DIR}-2:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
     sleep 3
     hostname=mongos${i}r2
     echo "Removing $hostname from $DNSFILE"
@@ -116,7 +116,7 @@ function createQueryRouterContainers() {
   echo "Config dbs --> ${CONFIG_DBS}"
 
   # Actually running mongos --configdb ...
-  WORKER=$(docker run --dns $NAMESERVER_IP -h mongos1 -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
+  WORKER=$(docker run --dns $NAMESERVER_IP --name mongos1 -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
   sleep 10 # Wait for mongo to start
   hostname=mongos1
   echo "Removing $hostname from $DNSFILE"
