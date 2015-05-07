@@ -73,6 +73,7 @@ function createShardContainers() {
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
     echo "$hostname IP: $WORKER_IP"
+    sleep 10
 
     WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${i}r2 -P -i -d -v ${WORKER_VOLUME_DIR}-2:/data/db -e OPTIONS="d --replSet set${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
     hostname=mongos${i}r2
@@ -83,7 +84,7 @@ function createShardContainers() {
     echo "$hostname IP: $WORKER_IP"
    
     echo "Wait for mongo to start..."
-    sleep 20
+    sleep 10
 
   done
 }
