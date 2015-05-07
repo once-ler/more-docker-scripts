@@ -110,8 +110,9 @@ function configureRouter() {
 
   echo "Config dbs --> ${CONFIG_DBS}"
 
+  # Actually running mongos --configdb ...
   WORKER=$(docker run --dns $NAMESERVER_IP --name mongos1 -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
-  sleep 5 # Wait for mongo to start
+  sleep 10 # Wait for mongo to start
   hostname=mongos1
   echo "Removing $hostname from $DNSFILE"
   sed -i "/$hostname/d" "$DNSFILE"
@@ -141,10 +142,19 @@ function configureRouter() {
 
 function start_workers() {
   
+  echo "-------------------------------------"
+  echo "Creating containers"
+  echo "-------------------------------------"
   createContainers  
-
+  
+  echo "-------------------------------------"
+  echo "Initiating Replica Sets"
+  echo "-------------------------------------"
   initiateReplicatSets
-
+  
+  echo "-------------------------------------"
+  echo "Configuring Router"
+  echo "-------------------------------------"
   configureRouter
 
   echo "#####################################"
