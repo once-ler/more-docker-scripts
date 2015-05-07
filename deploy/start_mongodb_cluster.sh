@@ -73,8 +73,9 @@ function start_workers() {
     sleep 5 # Waiting for set to be initiated
 
     #update setupReplicaSet.js
-    docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
-    
+    #docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos${i}r1 27017|cut -d ":" -f2) /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" mongos${i}r1:27017 /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
+
     # Create configserver
     WORKER=$(docker run --dns $NAMESERVER_IP --name mongos-configservers${i} -P -i -d -v ${WORKER_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
     sleep 3
@@ -96,6 +97,8 @@ function start_workers() {
     fi
   done
 
+  echo "Config dbs --> ${CONFIG_DBS}"
+
   WORKER=$(docker run --dns $NAMESERVER_IP --name mongos1 -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
   sleep 5 # Wait for mongo to start
   hostname=mongos1
@@ -105,13 +108,17 @@ function start_workers() {
   echo "address=\"/$hostname/$WORKER_IP\"" >> $DNSFILE
   echo "$hostname IP: $WORKER_IP"
 
-  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+  #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
   sleep 5 # Wait for sharding to be enabled
-  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
+  #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
+  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
   sleep 5 # Wait for db to be created
-  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2)/admin /root/jsfiles/enabelSharding.js" htaox/mongodb-worker:3.0.2
+  #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2)/admin /root/jsfiles/enabelSharding.js" htaox/mongodb-worker:3.0.2
+  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017/admin /root/jsfiles/enabelSharding.js" htaox/mongodb-worker:3.0.2
   sleep 5 # Wait sharding to be enabled
-  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
+  #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
+  docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
