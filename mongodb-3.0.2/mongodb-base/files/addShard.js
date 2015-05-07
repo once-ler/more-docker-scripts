@@ -1,1 +1,1 @@
-sh.addShard("set1/mongos@WORKERNUM@r1.mongo.dev.docker:27017");
+sh.addShard("set1/mongos@WORKERNUM@r1:27017");

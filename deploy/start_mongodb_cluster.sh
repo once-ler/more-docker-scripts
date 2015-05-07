@@ -102,7 +102,7 @@ function configureRouter() {
   # Setup and configure mongo router
   CONFIG_DBS=""
   for i in `seq 1 $NUM_WORKERS`; do
-    CONFIG_DBS="${CONFIG_DBS}mongos-configservers${i}.mongo.dev.docker:27017"
+    CONFIG_DBS="${CONFIG_DBS}mongos-configservers${i}:27017"
     if [ $i -lt $(($NUM_WORKERS-1)) ]; then
       CONFIG_DBS="${CONFIG_DBS},"
     fi
@@ -150,6 +150,7 @@ function start_workers() {
   echo "-------------------------------------"
   echo "Initiating Replica Sets"
   echo "-------------------------------------"
+  sleep 3
   initiateReplicatSets
   
   echo "-------------------------------------"
