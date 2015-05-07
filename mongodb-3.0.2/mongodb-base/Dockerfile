@@ -7,7 +7,7 @@
 #
 
 # Pull base image.
-FROM dockerfile/ubuntu
+FROM ubuntu:precise
 MAINTAINER  Henry Tao "htaox@hotmail.com"
 
 # Install MongoDB.
