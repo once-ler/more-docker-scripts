@@ -71,7 +71,7 @@ function createShardContainers() {
     # Create mongd servers
     for j in `seq 1 $NUM_REPLSETS`; do
       HOSTNAME=rs${i}_srv${j}
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --storageEngine wiredTiger --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
       sleep 3
       #echo "Removing $HOSTNAME from $DNSFILE"
       #sed -i "/$HOSTNAME/d" "$DNSFILE"
@@ -122,6 +122,8 @@ function createQueryRouterContainers() {
       CONFIG_DBS="${CONFIG_DBS},"
     fi
   done
+
+  echo "CONFIG DBS => ${CONFIG_DBS}"
 
   for j in `seq 1 $QUERY_ROUTERS`; do
     # Actually running mongos --configdb ...
