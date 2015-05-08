@@ -7,17 +7,19 @@ echo "WORKER_IP=$IP"
 if [[ ${OPTIONS} == *"setupReplicaSet"* ]]
 then
   
-  echo "rs.initiate()\n" >> /root/jsfiles/setupReplicaSet.js
+  echo "rs.initiate()" >> /root/jsfiles/setupReplicaSet.js
+
+  echo "MEMEBERS => $MEMBERS"
 
   #split up MEMBERS
   MEMBERS=($MEMBERS)
   for i in "${MEMBERS[@]}"; do
-    echo "rs.add(\"${i}:27017\")\n" >> /root/jsfiles/setupReplicaSet.js
+    echo "rs.add(\"${i}:27017\")" >> /root/jsfiles/setupReplicaSet.js
   done
 
-  echo "cfg = rs.conf()\n" >> /root/jsfiles/setupReplicaSet.js
-  echo "cfg.members[0].host = \"${IP}:27017\"\n" >> /root/jsfiles/setupReplicaSet.js
-  echo "rs.reconfig(cfg)\n" >> /root/jsfiles/setupReplicaSet.js  
+  echo "cfg = rs.conf()" >> /root/jsfiles/setupReplicaSet.js
+  echo "cfg.members[0].host = \"${IP}:27017\"" >> /root/jsfiles/setupReplicaSet.js
+  echo "rs.reconfig(cfg)" >> /root/jsfiles/setupReplicaSet.js  
   
 fi
 
