@@ -95,6 +95,7 @@ function setupShards() {
     done
 
     echo "Initiating Shards ${MEMBERS[@]}"
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
     docker run --dns $NAMESERVER_IP -P -i -t -e MEMBERS="${MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["mongos${i}"]}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
     sleep 5 # Wait for sharding to be enabled
   
@@ -129,7 +130,7 @@ function createQueryRouterContainers() {
     # Actually running mongos --configdb ...
     HOSTNAME=mongos${j}
     WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
-    sleep 3 # Wait for mongo to start
+    sleep 10 # Wait for mongo to start
     #echo "Removing $HOSTNAME from $DNSFILE"
     #sed -i "/$HOSTNAME/d" "$DNSFILE"
     #WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
@@ -165,7 +166,7 @@ function start_workers() {
   echo "-------------------------------------"
   echo "Setting Up Shards"
   echo "-------------------------------------"
-  setupShards
+  #setupShards
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
