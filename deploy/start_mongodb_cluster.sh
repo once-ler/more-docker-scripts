@@ -165,7 +165,7 @@ function start_workers() {
   echo "-------------------------------------"
   echo "Setting Up Shards"
   echo "-------------------------------------"
-  #setupShards
+  setupShards
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
