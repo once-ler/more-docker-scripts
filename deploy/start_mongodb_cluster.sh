@@ -15,7 +15,7 @@ function setupReplicaSets() {
     echo "Initiating Replicat Sets"
     #yes, _srv1 is correct
     docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
-    sleep 10
+    sleep 5
 
     #form array, start with *_srv2* and up
     for j in `seq 2 $NUM_REPLSETS`; do
@@ -141,7 +141,7 @@ function start_workers() {
   echo "-------------------------------------"
   echo "Creating Config Containers"
   echo "-------------------------------------"
-  #createConfigContainers
+  createConfigContainers
 
   echo "-------------------------------------"
   echo "Initiating Replica Sets"
