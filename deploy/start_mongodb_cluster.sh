@@ -91,7 +91,7 @@ function setupShards() {
     # *_srv1* is correct
     for j in `seq 1 $NUM_WORKERS`; do
       PRIMARY_SVR=${HOSTMAP["rs${j}_srv1"]}
-      MEMBERS[j]="rs${j}/${PRIMARY_SVR}"
+      MEMBERS[j]="rs${j}/${PRIMARY_SVR}:27017"
     done
 
     echo "Initiating Shards ${MEMBERS[@]}"
