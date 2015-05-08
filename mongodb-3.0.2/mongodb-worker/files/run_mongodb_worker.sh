@@ -4,7 +4,7 @@
 IP=$(ip -o -4 addr list eth0 | perl -n -e 'if (m{inet\s([\d\.]+)\/\d+\s}xms) { print $1 }')
 echo "WORKER_IP=$IP"
 
-if [[ ${OPTIONS} =~ addShard ]]; then
+if [[ ${OPTIONS} == *"addShard"* ]]; then
   echo "SHARDS => $MEMBERS"
   MEMBERS=($MEMBERS)
   for i in "${MEMBERS[@]}"; do
