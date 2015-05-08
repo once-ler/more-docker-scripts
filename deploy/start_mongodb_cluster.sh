@@ -95,7 +95,6 @@ function setupShards() {
     done
 
     echo "Initiating Shards ${MEMBERS[@]}"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
     docker run --dns $NAMESERVER_IP -P -i -t -e MEMBERS="${MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["mongos${i}"]}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
     sleep 5 # Wait for sharding to be enabled
   
@@ -119,7 +118,7 @@ function createQueryRouterContainers() {
   for i in `seq 1 3`; do
     #use the IP, not the HOSTNAME
     CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[mgs_cfg${i}]}:27017"
-    if [ $i -lt $(($NUM_WORKERS-1)) ]; then
+    if [ $i -lt $(($NUM_WORKERS)) ]; then
       CONFIG_DBS="${CONFIG_DBS},"
     fi
   done
