@@ -84,6 +84,37 @@ function createShardContainers() {
   done
 }
 
+function setupShards() {
+
+  for i in `seq 1 $QUERY_ROUTERS`; do
+
+    # *_srv1* is correct
+    for j in `seq 1 $NUM_WORKERS`; do
+      PRIMARY_SVR=${HOSTMAP["rs${j}_srv1"]}
+      MEMBERS[j]="rs${j}/${PRIMARY_SVR}"
+    done
+
+    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+    for i in `seq 1 $NUM_WORKERS`; do
+      echo "Adding shard for WORKER:${i}"
+      docker run --dns $NAMESERVER_IP -P -i -t -e MEMBERS="${MEMBERS[@]}" -e OPTIONS=" mongos${i}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+      sleep 5 # Wait for sharding to be enabled
+    done
+    
+    #echo "Test insert"
+    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
+    #sleep 5 # Wait for db to be created
+    
+    #echo "Enable shard"
+    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017/admin /root/jsfiles/enableSharding.js" htaox/mongodb-worker:3.0.2
+    #sleep 5 # Wait sharding to be enabled
+    
+    #echo "Test indexes"
+    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
+
+  done
+}
+
 function createQueryRouterContainers() {
   # Setup and configure mongo router
   CONFIG_DBS=""
@@ -94,8 +125,6 @@ function createQueryRouterContainers() {
       CONFIG_DBS="${CONFIG_DBS},"
     fi
   done
-
-  #echo "Config dbs => ${CONFIG_DBS}"
 
   for j in `seq 1 $QUERY_ROUTERS`; do
     # Actually running mongos --configdb ...
@@ -108,25 +137,6 @@ function createQueryRouterContainers() {
     #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
     echo "$HOSTNAME IP: $WORKER_IP"
     HOSTMAP[$HOSTNAME]=$WORKER_IP
-
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
-    for i in `seq 1 $NUM_WORKERS`; do
-      echo "Adding shard for WORKER:${i}"
-      docker run --dns $NAMESERVER_IP -P -i -t -e WORKERNUM=${i} -e OPTIONS=" mongos1:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
-      sleep 5 # Wait for sharding to be enabled
-    done
-    
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
-    echo "Test insert"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
-    sleep 5 # Wait for db to be created
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2)/admin /root/jsfiles/enabelSharding.js" htaox/mongodb-worker:3.0.2
-    echo "Enable shard"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017/admin /root/jsfiles/enableSharding.js" htaox/mongodb-worker:3.0.2
-    sleep 5 # Wait sharding to be enabled
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
-    echo "Test indexes"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
 
   done
 }
@@ -144,15 +154,19 @@ function start_workers() {
   createConfigContainers
 
   echo "-------------------------------------"
-  echo "Initiating Replica Sets"
+  echo "Setting Up Replica Sets"
   echo "-------------------------------------"
-  sleep 3
   setupReplicaSets
   
   echo "-------------------------------------"
   echo "Configuring Query Router Containers"
   echo "-------------------------------------"
-  #createQueryRouterContainers
+  createQueryRouterContainers
+
+  echo "-------------------------------------"
+  echo "Setting Up Shards"
+  echo "-------------------------------------"
+  setupShards
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"

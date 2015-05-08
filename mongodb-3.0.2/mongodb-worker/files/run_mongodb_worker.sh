@@ -4,12 +4,19 @@
 IP=$(ip -o -4 addr list eth0 | perl -n -e 'if (m{inet\s([\d\.]+)\/\d+\s}xms) { print $1 }')
 echo "WORKER_IP=$IP"
 
-if [[ ${OPTIONS} == *"setupReplicaSet"* ]]
-then
+if [[ ${OPTIONS} =~ addShard ]]; then
+  echo "SHARDS => $MEMBERS"
+  MEMBERS=($MEMBERS)
+  for i in "${MEMBERS[@]}"; do
+    echo "sh.addShard(\"${i}\")" >> /root/jsfiles/addShard.js
+  done
+fi
+
+if [[ ${OPTIONS} == *"setupReplicaSet"* ]]; then
   
   #echo "rs.initiate()" >> /root/jsfiles/setupReplicaSet.js
 
-  echo "MEMEBERS => $MEMBERS"
+  echo "REPLICA SET MEMBERS => $MEMBERS"
 
   #split up MEMBERS
   MEMBERS=($MEMBERS)
