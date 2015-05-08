@@ -12,6 +12,8 @@ VOLUME_MAP=""
 image_type="?"
 image_version="?"
 NUM_WORKERS=2
+NUM_REPLSETS=2
+QUERY_ROUTERS=1
 
 source $BASEDIR/start_nameserver.sh
 source $BASEDIR/start_mongodb_cluster.sh
@@ -35,7 +37,7 @@ function print_help() {
 }
 
 function parse_options() {
-    while getopts "i:w:cv:h" opt; do
+    while getopts "i:w:cv:h:s:q" opt; do
         case $opt in
         i)
             echo "$OPTARG" | grep "mongodb:" > /dev/null;
@@ -57,6 +59,12 @@ function parse_options() {
           ;;
         v)
             VOLUME_MAP=$OPTARG
+          ;;
+        s)
+            NUM_REPLSETS=$OPTARG
+          ;;
+        q)
+            QUERY_ROUTERS=$OPTARG
           ;;
         esac
     done

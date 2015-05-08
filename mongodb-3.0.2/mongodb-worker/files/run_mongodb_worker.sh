@@ -6,11 +6,19 @@ echo "WORKER_IP=$IP"
 
 if [[ ${OPTIONS} == *"setupReplicaSet"* ]]
 then
-  #: "${WORKERNUM:=}" # worker number
-  #echo "Updating setupReplicaSet.js for ${WORKERNUM}" 
-  # update setupReplicaSet.js
-  sed -i "s/@SERVER2@/$SERVER2/g" /root/jsfiles/setupReplicaSet.js
-  sed -i "s/@SERVER1@/$SERVER1/g" /root/jsfiles/setupReplicaSet.js
+  
+  echo "rs.initiate()\n" >> /root/jsfiles/setupReplicaSet.js
+
+  #split up MEMBERS
+  MEMBERS=($MEMBERS)
+  for i in "${MEMBERS[@]}"; do
+    echo "rs.add(\"${i}:27017\")\n" >> /root/jsfiles/setupReplicaSet.js
+  done
+
+  echo "cfg = rs.conf()\n" >> /root/jsfiles/setupReplicaSet.js
+  echo "cfg.members[0].host = \"${IP}:27017\"\n" >> /root/jsfiles/setupReplicaSet.js
+  echo "rs.reconfig(cfg)\n" >> /root/jsfiles/setupReplicaSet.js  
+  
 fi
 
 # Start mongo and log
