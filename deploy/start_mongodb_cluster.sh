@@ -12,6 +12,11 @@ function setupReplicaSets() {
 
   for i in `seq 1 $NUM_WORKERS`; do
 
+    echo "Initiating Replicat Sets"
+    #yes, _srv1 is correct
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    sleep 10
+
     #form array, start with *_srv2* and up
     for j in `seq 2 $NUM_REPLSETS`; do
       MEMBERS[j]=${HOSTMAP["rs${i}_srv${j}"]}

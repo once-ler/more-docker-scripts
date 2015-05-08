@@ -7,7 +7,7 @@ echo "WORKER_IP=$IP"
 if [[ ${OPTIONS} == *"setupReplicaSet"* ]]
 then
   
-  echo "rs.initiate()" >> /root/jsfiles/setupReplicaSet.js
+  #echo "rs.initiate()" >> /root/jsfiles/setupReplicaSet.js
 
   echo "MEMEBERS => $MEMBERS"
 
