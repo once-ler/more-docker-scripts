@@ -36,7 +36,7 @@ function createConfigContainers() {
     CONFIG_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-${i}"
     mkdir -p "${CONFIG_VOLUME_DIR}-cfg"
     
-    HOSTNAME=cfg${i}
+    HOSTNAME=mgs_cfg${i}
     WORKER=$(docker run --dns $NAMESERVER_IP --name $HOSTNAME -P -i -d -v ${CONFIG_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
     sleep 3
     #echo "Removing $HOSTNAME from $DNSFILE"
@@ -94,13 +94,10 @@ function setupShards() {
       MEMBERS[j]="rs${j}/${PRIMARY_SVR}"
     done
 
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" $NAMESERVER_IP:$(docker port mongos1 27017|cut -d ":" -f2) /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
-    for i in `seq 1 $NUM_WORKERS`; do
-      echo "Adding shard for WORKER:${i}"
-      docker run --dns $NAMESERVER_IP -P -i -t -e MEMBERS="${MEMBERS[@]}" -e OPTIONS=" mongos${i}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
-      sleep 5 # Wait for sharding to be enabled
-    done
-    
+    echo "Initiating Shards ${MEMBERS[@]}"
+    docker run --dns $NAMESERVER_IP -P -i -t -e MEMBERS="${MEMBERS[@]}" -e OPTIONS=" mongos${i}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+    sleep 5 # Wait for sharding to be enabled
+  
     #echo "Test insert"
     #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
     #sleep 5 # Wait for db to be created
@@ -120,7 +117,7 @@ function createQueryRouterContainers() {
   CONFIG_DBS=""
   for i in `seq 1 3`; do
     #use the IP, not the HOSTNAME
-    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[mongos-configserver${i}]}:27017"
+    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[mgs_cfg${i}]}:27017"
     if [ $i -lt $(($NUM_WORKERS-1)) ]; then
       CONFIG_DBS="${CONFIG_DBS},"
     fi
@@ -128,9 +125,9 @@ function createQueryRouterContainers() {
 
   for j in `seq 1 $QUERY_ROUTERS`; do
     # Actually running mongos --configdb ...
-    WORKER=$(docker run --dns $NAMESERVER_IP --name mongos${j} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
+    HOSTNAME=mongos${j}
+    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
     sleep 3 # Wait for mongo to start
-    HOSTNAME=mongos1
     #echo "Removing $HOSTNAME from $DNSFILE"
     #sed -i "/$HOSTNAME/d" "$DNSFILE"
     #WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
