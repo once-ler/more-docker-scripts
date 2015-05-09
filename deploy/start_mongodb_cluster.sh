@@ -147,7 +147,7 @@ function createQueryRouterContainers() {
     #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
     echo "$HOSTNAME IP: $WORKER_IP"
     HOSTMAP[$HOSTNAME]=$WORKER_IP
-
+    ROUTERS[j]=$WORKER_IP
   done
 }
 
@@ -187,7 +187,6 @@ function start_workers() {
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
-  echo "Connect to cluster by:"
-  #echo "$ mongo --port $(docker port mongos1 27017|cut -d ":" -f2)"
+  echo "Connect to cluster by: ${ROUTERS[@]}"
 }
 
