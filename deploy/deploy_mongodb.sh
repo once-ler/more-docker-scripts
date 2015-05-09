@@ -13,7 +13,7 @@ image_type="?"
 image_version="?"
 NUM_WORKERS=2
 NUM_REPLSETS=2
-QUERY_ROUTERS=1
+NUM_QUERY_ROUTERS=1
 
 source $BASEDIR/start_nameserver.sh
 source $BASEDIR/start_mongodb_cluster.sh
@@ -64,7 +64,7 @@ function parse_options() {
             NUM_REPLSETS=$OPTARG
           ;;
         q)
-            QUERY_ROUTERS=$OPTARG
+            NUM_QUERY_ROUTERS=$OPTARG
           ;;
         esac
     done

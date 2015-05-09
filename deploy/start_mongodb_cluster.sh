@@ -86,7 +86,7 @@ function createShardContainers() {
 
 function setupShards() {
 
-  for i in `seq 1 $QUERY_ROUTERS`; do
+  for i in `seq 1 $NUM_QUERY_ROUTERS`; do
 
     # *_srv1* is correct
     for j in `seq 1 $NUM_WORKERS`; do
@@ -126,7 +126,7 @@ function createQueryRouterContainers() {
 
   echo "CONFIG DBS => ${CONFIG_DBS}"
 
-  for j in `seq 1 $QUERY_ROUTERS`; do
+  for j in `seq 1 $NUM_QUERY_ROUTERS`; do
     # Actually running mongos --configdb ...
     HOSTNAME=mongos${j}
     WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
@@ -143,6 +143,13 @@ function createQueryRouterContainers() {
 
 function start_workers() {
   
+  echo "-------------------------------------"
+  echo "Settings"
+  echo "-------------------------------------"
+  echo "NUM_WORKERS: ${NUM_WORKERS}"
+  echo "NUM_REPLSETS: ${NUM_REPLSETS}"
+  echo "NUM_QUERY_ROUTERS: ${NUM_QUERY_ROUTERS}"
+
   echo "-------------------------------------"
   echo "Creating Shard Containers"
   echo "-------------------------------------"
@@ -166,7 +173,7 @@ function start_workers() {
   echo "-------------------------------------"
   echo "Setting Up Shards"
   echo "-------------------------------------"
-  #setupShards
+  setupShards
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
