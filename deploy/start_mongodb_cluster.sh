@@ -19,12 +19,12 @@ function setupReplicaSets() {
 
     #form array, start with *_srv2* and up
     for j in `seq 2 $NUM_REPLSETS`; do
-      MEMBERS[j]=${HOSTMAP["rs${i}_srv${j}"]}
+      REPLICA_MEMBERS[j]=${HOSTMAP["rs${i}_srv${j}"]}
     done
 
     echo "Setting Replicat Sets"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e MEMBERS="${MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_MEMBERS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
     sleep 10
 
   done
@@ -91,12 +91,12 @@ function setupShards() {
     # *_srv1* is correct
     for j in `seq 1 $NUM_WORKERS`; do
       PRIMARY_SVR=${HOSTMAP["rs${j}_srv1"]}
-      MEMBERS[j]="rs${j}/${PRIMARY_SVR}:27017"
+      SHARD_MEMBERS[j]="rs${j}/${PRIMARY_SVR}:27017"
     done
 
     echo "Initiating Shards ${MEMBERS[@]}"
     QUERY_ROUTER_IP=${HOSTMAP["mongos${i}"]}
-    docker run --dns $NAMESERVER_IP -P -i -t -e MEMBERS="${MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/local /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/local /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
     sleep 5 # Wait for sharding to be enabled
   
     #echo "Test insert"
