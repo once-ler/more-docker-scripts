@@ -25,7 +25,7 @@ function setupReplicaSets() {
     echo "Setting Replicat Sets"
     #yes, _srv1 is correct
     docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_MEMBERS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
-    sleep 10
+    sleep 5
 
   done
 }
@@ -130,7 +130,7 @@ function createQueryRouterContainers() {
     # Actually running mongos --configdb ...
     HOSTNAME=mongos${j}
     WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
-    sleep 10 # Wait for mongo to start
+    sleep 5 # Wait for mongo to start
     #echo "Removing $HOSTNAME from $DNSFILE"
     #sed -i "/$HOSTNAME/d" "$DNSFILE"
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
