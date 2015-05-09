@@ -133,7 +133,7 @@ function createQueryRouterContainers() {
     sleep 10 # Wait for mongo to start
     #echo "Removing $HOSTNAME from $DNSFILE"
     #sed -i "/$HOSTNAME/d" "$DNSFILE"
-    #WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
+    WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
     echo "$HOSTNAME IP: $WORKER_IP"
     HOSTMAP[$HOSTNAME]=$WORKER_IP
@@ -166,7 +166,7 @@ function start_workers() {
   echo "-------------------------------------"
   echo "Setting Up Shards"
   echo "-------------------------------------"
-  setupShards
+  #setupShards
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
