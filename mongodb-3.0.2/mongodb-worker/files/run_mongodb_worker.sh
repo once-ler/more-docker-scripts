@@ -29,11 +29,15 @@ if [[ ${OPTIONS} == *"setupReplicaSet"* ]]; then
   for i in "${REPLICA_MEMBERS[@]}"; do
     echo "rs.add(\"${i}:27017\")" >> /root/jsfiles/setupReplicaSet.js
   done
-
-  echo "cfg = rs.conf()" >> /root/jsfiles/setupReplicaSet.js
-  echo "cfg.members[0].host = \"${IP}:27017\"" >> /root/jsfiles/setupReplicaSet.js
-  echo "rs.reconfig(cfg)" >> /root/jsfiles/setupReplicaSet.js  
   
+fi
+
+if [[ ${OPTIONS} == *"reconfigure"* ]]; then
+
+  echo "cfg = rs.conf()" >> /root/jsfiles/reconfigure.js
+  echo "cfg.members[0].host = \"${IP}:27017\"" >> /root/jsfiles/reconfigure.js
+  echo "rs.reconfig(cfg)" >> /root/jsfiles/reconfigure.js
+
 fi
 
 # Start mongo and log
