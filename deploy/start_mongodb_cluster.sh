@@ -119,7 +119,7 @@ function createQueryRouterContainers() {
   for i in `seq 1 3`; do
     #use the IP, not the HOSTNAME
     CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[mgs_cfg${i}]}:27017"
-    if [ $i -lt $(($NUM_WORKERS)) ]; then
+    if [ $i -lt 3 ]; then
       CONFIG_DBS="${CONFIG_DBS},"
     fi
   done
