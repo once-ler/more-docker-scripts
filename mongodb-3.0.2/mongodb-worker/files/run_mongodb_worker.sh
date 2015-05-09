@@ -2,7 +2,9 @@
 : "${OPTIONS:=}" # Mongo options
 
 IP=$(ip -o -4 addr list eth0 | perl -n -e 'if (m{inet\s([\d\.]+)\/\d+\s}xms) { print $1 }')
-echo "WORKER_IP=$IP"
+#echo "WORKER_IP=$IP"
+
+echo "OPTIONS => ${OPTIONS}"
 
 if [[ ${OPTIONS} == *"addShard"* ]]; then
   echo "SHARDS => $SHARD_MEMBERS"
@@ -36,7 +38,7 @@ if [[ ${OPTIONS} == *"reconfigure"* ]]; then
 
   echo "" >> /root/jsfiles/reconfigure.js
   echo "cfg = rs.conf()" >> /root/jsfiles/reconfigure.js
-  echo "cfg.members[0].host = \"${IP}:27017\"" >> /root/jsfiles/reconfigure.js
+  echo "cfg.members[0].host = \"${PRIMARY_SERVER}:27017\"" >> /root/jsfiles/reconfigure.js
   echo "rs.reconfig(cfg)" >> /root/jsfiles/reconfigure.js
 
 fi

@@ -34,7 +34,7 @@ function setupReplicaSets() {
   for i in `seq 1 $NUM_WORKERS`; do
     echo "Setting Replicat Sets"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["rs${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:3.0.2
     sleep 5
   done
 }
