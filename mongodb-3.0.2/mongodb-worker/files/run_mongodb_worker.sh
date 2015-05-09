@@ -6,6 +6,7 @@ echo "WORKER_IP=$IP"
 
 if [[ ${OPTIONS} == *"addShard"* ]]; then
   echo "SHARDS => $MEMBERS"
+  echo "" >> /root/jsfiles/addShard.js
   MEMBERS=($MEMBERS)
   for i in "${MEMBERS[@]}"; do
     echo "sh.addShard(\"${i}\")" >> /root/jsfiles/addShard.js
@@ -17,7 +18,7 @@ if [[ ${OPTIONS} == *"setupReplicaSet"* ]]; then
   #echo "rs.initiate()" >> /root/jsfiles/setupReplicaSet.js
 
   echo "REPLICA SET MEMBERS => $MEMBERS"
-
+  echo "" >> /root/jsfiles/setupReplicaSet.js
   #split up MEMBERS
   MEMBERS=($MEMBERS)
   for i in "${MEMBERS[@]}"; do
