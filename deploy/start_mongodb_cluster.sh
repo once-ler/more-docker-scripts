@@ -25,7 +25,7 @@ function setupReplicaSets() {
     echo "Setting Replicat Sets"
     #yes, _srv1 is correct
     docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_MEMBERS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
-    sleep 5
+    sleep 10
 
   done
 }
