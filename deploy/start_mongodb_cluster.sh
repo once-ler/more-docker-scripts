@@ -89,14 +89,14 @@ function setupShards() {
   for i in `seq 1 $NUM_QUERY_ROUTERS`; do
 
     # *_srv1* is correct
-    for j in `seq 1 $NUM_WORKERS`; do
-      PRIMARY_SVR=${HOSTMAP["rs${j}_srv1"]}
-      SHARD_MEMBERS[j]="rs${j}/${PRIMARY_SVR}:27017"
+    for j in `seq 1 $NUM_WORKERS`; do      
+      REPLICA_SETS[j]="rs${j}"
+      SHARD_MEMBERS[j]=${HOSTMAP["rs${j}_srv1"]}
     done
 
     QUERY_ROUTER_IP=${HOSTMAP["mongos${i}"]}
     echo "Initiating Shards ${SHARD_MEMBERS[@]} for Router ${QUERY_ROUTER_IP}"
-    WORKER=$(docker run --dns $NAMESERVER_IP -P -i -t -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/local /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2)
+    WORKER=$(docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_SETS="${REPLICA_SETS[@]}" -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/local /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2)
     sleep 5 # Wait for sharding to be enabled
   
     #echo "Test insert"

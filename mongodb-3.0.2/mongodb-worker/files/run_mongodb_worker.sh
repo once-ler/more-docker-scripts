@@ -8,8 +8,13 @@ if [[ ${OPTIONS} == *"addShard"* ]]; then
   echo "SHARDS => $SHARD_MEMBERS"
   echo "" >> /root/jsfiles/addShard.js
   SHARD_MEMBERS=($SHARD_MEMBERS)
-  for i in "${SHARD_MEMBERS[@]}"; do
-    echo "sh.addShard(\"${i}\")" >> /root/jsfiles/addShard.js
+  REPLICA_SETS=($REPLICA_SETS)
+  SHARD_COUNT=${#SHARD_MEMBERS[@]}
+  #for i in "${SHARD_MEMBERS[@]}"; do
+  for i in `seq 1 $SHARD_COUNT`; do
+    SHARD=${SHARD_MEMBERS[i]}
+    REPLICA_SET=${REPLICA_SETS[i]}
+    echo "sh.addShard(\"${REPLICA_SET}/${SHARD}:27017\")" >> /root/jsfiles/addShard.js
   done
 fi
 
