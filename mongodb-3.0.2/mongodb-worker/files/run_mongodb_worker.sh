@@ -34,6 +34,7 @@ fi
 
 if [[ ${OPTIONS} == *"reconfigure"* ]]; then
 
+  echo "" >> /root/jsfiles/reconfigure.js
   echo "cfg = rs.conf()" >> /root/jsfiles/reconfigure.js
   echo "cfg.members[0].host = \"${IP}:27017\"" >> /root/jsfiles/reconfigure.js
   echo "rs.reconfig(cfg)" >> /root/jsfiles/reconfigure.js
