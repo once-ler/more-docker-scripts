@@ -8,55 +8,6 @@ BASEDIR=$(cd $(dirname $0); pwd)
 
 declare -A HOSTMAP
 
-function setupReplicaSets() {
-
-  for i in `seq 1 $NUM_WORKERS`; do
-
-    echo "Initiating Replicat Sets"
-    #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
-    sleep 5
-
-  done
-
-  for i in `seq 1 $NUM_WORKERS`; do
-    #form array, start with *_srv2* and up
-    for j in `seq 2 $NUM_REPLSETS`; do
-      REPLICA_MEMBERS[j]=${HOSTMAP["rs${i}_srv${j}"]}
-    done
-
-    echo "Setting Replicat Sets"
-    #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_MEMBERS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
-    sleep 5
-  done
-
-  for i in `seq 1 $NUM_WORKERS`; do
-    echo "Setting Replicat Sets"
-    #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["rs${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:3.0.2
-    sleep 5
-  done
-}
-
-function createConfigContainers() {
-  #should have exactly *3* for production
-  for i in `seq 1 3`; do
-    CONFIG_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-${i}"
-    mkdir -p "${CONFIG_VOLUME_DIR}-cfg"
-    
-    HOSTNAME=mgs_cfg${i}
-    WORKER=$(docker run --dns $NAMESERVER_IP --name $HOSTNAME -P -i -d -v ${CONFIG_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
-    sleep 3
-    #echo "Removing $HOSTNAME from $DNSFILE"
-    #sed -i "/$HOSTNAME/d" "$DNSFILE"
-    WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
-    #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
-    echo "$HOSTNAME IP: $WORKER_IP"
-    HOSTMAP[$HOSTNAME]=$WORKER_IP
-  done
-}
-
 function createShardContainers() {
 
   # split the volume syntax by :, then use the array to build new volume map
@@ -93,6 +44,83 @@ function createShardContainers() {
   done
 }
 
+function createConfigContainers() {
+  #should have exactly *3* for production
+  for i in `seq 1 3`; do
+    CONFIG_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-${i}"
+    mkdir -p "${CONFIG_VOLUME_DIR}-cfg"
+    
+    HOSTNAME=mgs_cfg${i}
+    WORKER=$(docker run --dns $NAMESERVER_IP --name $HOSTNAME -P -i -d -v ${CONFIG_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
+    sleep 3
+    #echo "Removing $HOSTNAME from $DNSFILE"
+    #sed -i "/$HOSTNAME/d" "$DNSFILE"
+    WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
+    #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
+    echo "$HOSTNAME IP: $WORKER_IP"
+    HOSTMAP[$HOSTNAME]=$WORKER_IP
+  done
+}
+
+function setupReplicaSets() {
+
+  for i in `seq 1 $NUM_WORKERS`; do
+
+    echo "Initiating Replicat Sets"
+    #yes, _srv1 is correct
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    sleep 5
+
+  done
+
+  for i in `seq 1 $NUM_WORKERS`; do
+    #form array, start with *_srv2* and up
+    for j in `seq 2 $NUM_REPLSETS`; do
+      REPLICA_MEMBERS[j]=${HOSTMAP["rs${i}_srv${j}"]}
+    done
+
+    echo "Setting Replicat Sets"
+    #yes, _srv1 is correct
+    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_MEMBERS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
+    sleep 5
+  done
+
+  for i in `seq 1 $NUM_WORKERS`; do
+    echo "Setting Replicat Sets"
+    #yes, _srv1 is correct
+    docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["rs${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:3.0.2
+    sleep 5
+  done
+}
+
+function createQueryRouterContainers() {
+  # Setup and configure mongo router
+  CONFIG_DBS=""
+  for i in `seq 1 3`; do
+    #use the IP, not the HOSTNAME
+    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[mgs_cfg${i}]}:27017"
+    if [ $i -lt 3 ]; then
+      CONFIG_DBS="${CONFIG_DBS},"
+    fi
+  done
+
+  echo "CONFIG DBS => ${CONFIG_DBS}"
+
+  for j in `seq 1 $NUM_QUERY_ROUTERS`; do
+    # Actually running mongos --configdb ...
+    HOSTNAME=mongos${j}
+    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
+    sleep 5 # Wait for mongo to start
+    #echo "Removing $HOSTNAME from $DNSFILE"
+    #sed -i "/$HOSTNAME/d" "$DNSFILE"
+    WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
+    #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
+    echo "$HOSTNAME IP: $WORKER_IP"
+    HOSTMAP[$HOSTNAME]=$WORKER_IP
+    ROUTERS[j]=$WORKER_IP
+  done
+}
+
 function setupShards() {
 
   for i in `seq 1 $NUM_QUERY_ROUTERS`; do
@@ -123,32 +151,42 @@ function setupShards() {
   done
 }
 
-function createQueryRouterContainers() {
-  # Setup and configure mongo router
-  CONFIG_DBS=""
+function updateDNSFile() {
+  #Shard containers
+  for i in `seq 1 $NUM_WORKERS`; do
+    for j in `seq 1 $NUM_REPLSETS`; do
+      HOSTNAME=rs${i}_srv${j}
+      echo "Removing $HOSTNAME from $DNSFILE"
+      sed -i "/$HOSTNAME/d" "$DNSFILE"
+
+      WORKER_IP=${HOSTMAP["rs${i}_srv${j}"]}
+      echo "Updating $HOSTNAME in $DNSFILE to $WORKER_IP"
+      echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
+    done
+  done
+
+  #Config containers
   for i in `seq 1 3`; do
-    #use the IP, not the HOSTNAME
-    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[mgs_cfg${i}]}:27017"
-    if [ $i -lt 3 ]; then
-      CONFIG_DBS="${CONFIG_DBS},"
-    fi
+    HOSTNAME=mgs_cfg${i}
+    echo "Removing $HOSTNAME from $DNSFILE"
+    sed -i "/$HOSTNAME/d" "$DNSFILE"
+
+    WORKER_IP=${HOSTMAP[mgs_cfg${i}]}
+    echo "Updating $HOSTNAME in $DNSFILE to $WORKER_IP"
+    echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
   done
-
-  echo "CONFIG DBS => ${CONFIG_DBS}"
-
+  
+  #Query containers
   for j in `seq 1 $NUM_QUERY_ROUTERS`; do
-    # Actually running mongos --configdb ...
     HOSTNAME=mongos${j}
-    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
-    sleep 5 # Wait for mongo to start
-    #echo "Removing $HOSTNAME from $DNSFILE"
-    #sed -i "/$HOSTNAME/d" "$DNSFILE"
-    WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
-    #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
-    echo "$HOSTNAME IP: $WORKER_IP"
-    HOSTMAP[$HOSTNAME]=$WORKER_IP
-    ROUTERS[j]=$WORKER_IP
+    echo "Removing $HOSTNAME from $DNSFILE"
+    sed -i "/$HOSTNAME/d" "$DNSFILE"
+
+    WORKER_IP=${HOSTMAP["mongos${i}"]}
+    echo "Updating $HOSTNAME in $DNSFILE to $WORKER_IP"
+    echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
   done
+
 }
 
 function start_workers() {
@@ -184,6 +222,11 @@ function start_workers() {
   echo "Setting Up Shards"
   echo "-------------------------------------"
   setupShards
+
+  echo "-------------------------------------"
+  echo "Updating DNS file"
+  echo "-------------------------------------"
+  updateDNSFile
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
