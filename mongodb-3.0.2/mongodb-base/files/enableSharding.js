@@ -1,2 +1,2 @@
-db.runCommand( { enableSharding : "database" } );
-sh.shardCollection( "database.testData", { _id: "hashed" } );
+db.runCommand( { enableSharding : "test" } );
+sh.shardCollection( "test.testData", { _id: "hashed" } );

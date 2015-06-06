@@ -133,21 +133,9 @@ function setupShards() {
 
     QUERY_ROUTER_IP=${HOSTMAP["mongos${i}"]}
     echo "Initiating Shards ${SHARD_MEMBERS[@]} for Router ${QUERY_ROUTER_IP}"
-    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_SETS="${REPLICA_SETS[@]}" -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/local /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_SETS="${REPLICA_SETS[@]}" -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
     sleep 5 # Wait for sharding to be enabled
   
-    
-    #echo "Test insert"
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
-    #sleep 5 # Wait for db to be created
-    
-    #echo "Enable shard"
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017/admin /root/jsfiles/enableSharding.js" htaox/mongodb-worker:3.0.2
-    #sleep 5 # Wait sharding to be enabled
-    
-    #echo "Test indexes"
-    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" mongos1:27017 /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
-
   done
 }
 
@@ -189,6 +177,25 @@ function updateDNSFile() {
 
 }
 
+function enableShardTest() {
+
+    #Just pick the first router
+    #Note: used seq 1, so mongos1
+    QUERY_ROUTER_IP=${HOSTMAP["mongos1"]}
+
+    echo "Test insert"
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
+    sleep 5 # Wait for db to be created
+    
+    echo "Enable shard"
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/enableSharding.js" htaox/mongodb-worker:3.0.2
+    sleep 5 # Wait sharding to be enabled
+    
+    echo "Test indexes"
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
+
+}
+
 function start_workers() {
   
   echo "-------------------------------------"
@@ -227,6 +234,11 @@ function start_workers() {
   echo "Updating DNS file"
   echo "-------------------------------------"
   updateDNSFile
+
+  echo "-------------------------------------"
+  echo "Enable Shard Test"
+  echo "-------------------------------------"
+  enableShardTest
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
