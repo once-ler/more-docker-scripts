@@ -4,7 +4,6 @@
 #DOCKERIP="10.1.42.1"
 
 BASEDIR=$(cd $(dirname $0); pwd)
-#NUM_REPLSETS
 
 declare -A HOSTMAP
 
@@ -17,7 +16,6 @@ function createShardContainers() {
   for i in `seq 1 $NUM_WORKERS`; do
 
     echo "starting worker container"
-    #HOSTNAME="${WORKER_HOSTNAME}${i}${DOMAINNAME}"
     # rename $VOLUME_MAP by adding worker number as suffix if it is not empty
     WORKER_VOLUME_MAP=$VOLUME_MAP
     if [ "$VOLUME_MAP" ]; then
@@ -31,13 +29,10 @@ function createShardContainers() {
     # Create mongd servers
     for j in `seq 1 $NUM_REPLSETS`; do
       HOSTNAME=rs${i}_srv${j}
+      # use wiredTiger as storageEngine
       WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --storageEngine wiredTiger --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:latest)
-      #WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:latest)
       sleep 3
-      #echo "Removing $HOSTNAME from $DNSFILE"
-      #sed -i "/$HOSTNAME/d" "$DNSFILE"
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
-      #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
       echo "$HOSTNAME IP: $WORKER_IP"
       HOSTMAP[$HOSTNAME]=$WORKER_IP
     done
@@ -54,10 +49,7 @@ function createConfigContainers() {
     HOSTNAME=mgs_cfg${i}
     WORKER=$(docker run --dns $NAMESERVER_IP --name $HOSTNAME -P -i -d -v ${CONFIG_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:latest)
     sleep 3
-    #echo "Removing $HOSTNAME from $DNSFILE"
-    #sed -i "/$HOSTNAME/d" "$DNSFILE"
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
-    #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
     echo "$HOSTNAME IP: $WORKER_IP"
     HOSTMAP[$HOSTNAME]=$WORKER_IP
   done
@@ -82,7 +74,7 @@ function setupReplicaSets() {
 
     echo "Setting Replicat Sets"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_MEMBERS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:latest
+    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICAS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:latest
     sleep 5
   done
 
@@ -112,10 +104,7 @@ function createQueryRouterContainers() {
     HOSTNAME=mongos${j}
     WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:latest)
     sleep 5 # Wait for mongo to start
-    #echo "Removing $HOSTNAME from $DNSFILE"
-    #sed -i "/$HOSTNAME/d" "$DNSFILE"
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
-    #echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
     echo "$HOSTNAME IP: $WORKER_IP"
     HOSTMAP[$HOSTNAME]=$WORKER_IP
     ROUTERS[j]=$WORKER_IP
@@ -128,12 +117,7 @@ function setupShards() {
 
   # *_srv1* is correct
   for j in `seq 1 $NUM_WORKERS`; do      
-    #REPLICA_SETS[j]="rs${j}"
-    #SHARD_MEMBERS[j]=${HOSTMAP["rs${j}_srv1"]}
-
-    #use @IP@ and sed later with find/replace "/"
-    #the "/" is causing docker to download an "image", is this a bug?
-    SHARD_MEMBERS[j]="rs${j}@IP@${HOSTMAP["rs${j}_srv1"]}"
+    SHARD_MEMBERS[j]="rs${j}/${HOSTMAP["rs${j}_srv1"]}"
   done
 
   #Convert array to string; replace space with "@"
@@ -143,7 +127,6 @@ function setupShards() {
   #Only need to log into one query router
   QUERY_ROUTER_IP=${HOSTMAP["mongos1"]}
   echo "Initiating Shards ${SHARD_MEMBERS[@]} for Router ${QUERY_ROUTER_IP}"
-  #docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_SETS="${REPLICA_SETS[@]}" -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
   docker run --dns $NAMESERVER_IP -P -i -t -e SHARDS="${SHARD_MEMBERS}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
   sleep 5 # Wait for sharding to be enabled
 
@@ -255,4 +238,3 @@ function start_workers() {
   echo "MongoDB Cluster is now ready to use"
   echo "Connect to cluster by: ${ROUTERS[@]}"
 }
-

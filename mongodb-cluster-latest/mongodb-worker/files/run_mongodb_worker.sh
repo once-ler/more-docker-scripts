@@ -19,13 +19,11 @@ fi
 
 if [[ ${OPTIONS} == *"setupReplicaSet"* ]]; then
   
-  #echo "rs.initiate()" >> /root/jsfiles/setupReplicaSet.js
-
   echo "REPLICA SET MEMBERS => $REPLICA_MEMBERS"
   echo "" >> /root/jsfiles/setupReplicaSet.js
   #split up MEMBERS
-  REPLICA_MEMBERS=($REPLICA_MEMBERS)
-  for i in "${REPLICA_MEMBERS[@]}"; do
+  REPLICAS=($REPLICAS)
+  for i in "${REPLICAS[@]}"; do
     echo "rs.add(\"${i}:27017\");" >> /root/jsfiles/setupReplicaSet.js
   done
   echo "Executing $(cat /root/jsfiles/setupReplicaSet.js)"
