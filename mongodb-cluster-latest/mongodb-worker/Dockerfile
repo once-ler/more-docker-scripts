@@ -1,5 +1,5 @@
 # Pull base image.
-FROM htaox/mongodb-base:3.0.2
+FROM htaox/mongodb-base:latest
 MAINTAINER Henry Tao htaox@hotmail.com
 
 ADD files /root/mongodb_worker_files
