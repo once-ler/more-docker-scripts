@@ -124,20 +124,23 @@ function createQueryRouterContainers() {
 
 function setupShards() {
 
-  for i in `seq 1 $NUM_QUERY_ROUTERS`; do
+  #for i in `seq 1 $NUM_QUERY_ROUTERS`; do
 
     # *_srv1* is correct
     for j in `seq 1 $NUM_WORKERS`; do      
-      REPLICA_SETS[j]="rs${j}"
-      SHARD_MEMBERS[j]=${HOSTMAP["rs${j}_srv1"]}
+      #REPLICA_SETS[j]="rs${j}"
+      #SHARD_MEMBERS[j]=${HOSTMAP["rs${j}_srv1"]}
+      SHARD_MEMBERS[j]="rs${j}/${HOSTMAP["rs${j}_srv1"]}"
     done
 
-    QUERY_ROUTER_IP=${HOSTMAP["mongos${i}"]}
+    #Only need to log into one query router
+    QUERY_ROUTER_IP=${HOSTMAP["mongos1"]}
     echo "Initiating Shards ${SHARD_MEMBERS[@]} for Router ${QUERY_ROUTER_IP}"
-    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_SETS="${REPLICA_SETS[@]}" -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
+    #docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_SETS="${REPLICA_SETS[@]}" -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
+    docker run --dns $NAMESERVER_IP -P -i -t -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
     sleep 5 # Wait for sharding to be enabled
   
-  done
+  #done
 }
 
 function updateDNSFile() {

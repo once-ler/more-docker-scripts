@@ -8,16 +8,17 @@ echo "OPTIONS=${OPTIONS}"
 
 if [[ ${OPTIONS} == *"addShard"* ]]; then
   echo "SHARDS => $SHARD_MEMBERS"
-  echo "REPLICA_SETS => $REPLICA_SETS"
+  #echo "REPLICA_SETS => $REPLICA_SETS"
   echo "" >> /root/jsfiles/addShard.js
   SHARD_MEMBERS=($SHARD_MEMBERS)
-  REPLICA_SETS=($REPLICA_SETS)
-  SHARD_COUNT=${#SHARD_MEMBERS[@]}
-  #for i in "${SHARD_MEMBERS[@]}"; do
-  for i in `seq 1 $SHARD_COUNT`; do
-    SHARD=${SHARD_MEMBERS[i-1]}
-    REPLICA_SET=${REPLICA_SETS[i-1]}
-    echo "sh.addShard(\"${REPLICA_SET}/${SHARD}:27017\");" >> /root/jsfiles/addShard.js
+  #REPLICA_SETS=($REPLICA_SETS)
+  #SHARD_COUNT=${#SHARD_MEMBERS[@]}
+  for i in "${SHARD_MEMBERS[@]}"; do
+  #for i in `seq 1 $SHARD_COUNT`; do
+    #SHARD=${SHARD_MEMBERS[i-1]}
+    #REPLICA_SET=${REPLICA_SETS[i-1]}
+    #echo "sh.addShard(\"${REPLICA_SET}/${SHARD}:27017\");" >> /root/jsfiles/addShard.js
+      echo "sh.addShard(\"${i}:27017\");" >> /root/jsfiles/addShard.js
   done
   echo "Executing $(cat /root/jsfiles/addShard.js)"
 fi
