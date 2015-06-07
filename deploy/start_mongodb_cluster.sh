@@ -31,7 +31,8 @@ function createShardContainers() {
     # Create mongd servers
     for j in `seq 1 $NUM_REPLSETS`; do
       HOSTNAME=rs${i}_srv${j}
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --storageEngine wiredTiger --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:3.0.2)
+      # WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --storageEngine wiredTiger --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:latest)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:latest)
       sleep 3
       #echo "Removing $HOSTNAME from $DNSFILE"
       #sed -i "/$HOSTNAME/d" "$DNSFILE"
@@ -51,7 +52,7 @@ function createConfigContainers() {
     mkdir -p "${CONFIG_VOLUME_DIR}-cfg"
     
     HOSTNAME=mgs_cfg${i}
-    WORKER=$(docker run --dns $NAMESERVER_IP --name $HOSTNAME -P -i -d -v ${CONFIG_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:3.0.2)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name $HOSTNAME -P -i -d -v ${CONFIG_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --notablescan --noprealloc --smallfiles --port 27017" htaox/mongodb-worker:latest)
     sleep 3
     #echo "Removing $HOSTNAME from $DNSFILE"
     #sed -i "/$HOSTNAME/d" "$DNSFILE"
@@ -68,7 +69,7 @@ function setupReplicaSets() {
 
     echo "Initiating Replicat Sets"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:latest
     sleep 5
 
   done
@@ -81,14 +82,14 @@ function setupReplicaSets() {
 
     echo "Setting Replicat Sets"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_MEMBERS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_MEMBERS="${REPLICA_MEMBERS[@]}" -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:latest
     sleep 5
   done
 
   for i in `seq 1 $NUM_WORKERS`; do
     echo "Setting Replicat Sets"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["rs${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["rs${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["rs${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:latest
     sleep 5
   done
 }
@@ -109,7 +110,7 @@ function createQueryRouterContainers() {
   for j in `seq 1 $NUM_QUERY_ROUTERS`; do
     # Actually running mongos --configdb ...
     HOSTNAME=mongos${j}
-    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:3.0.2)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:latest)
     sleep 5 # Wait for mongo to start
     #echo "Removing $HOSTNAME from $DNSFILE"
     #sed -i "/$HOSTNAME/d" "$DNSFILE"
@@ -133,7 +134,7 @@ function setupShards() {
 
     QUERY_ROUTER_IP=${HOSTMAP["mongos${i}"]}
     echo "Initiating Shards ${SHARD_MEMBERS[@]} for Router ${QUERY_ROUTER_IP}"
-    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_SETS="${REPLICA_SETS[@]}" -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/addShard.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICA_SETS="${REPLICA_SETS[@]}" -e SHARD_MEMBERS="${SHARD_MEMBERS[@]}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
     sleep 5 # Wait for sharding to be enabled
   
   done
@@ -184,15 +185,15 @@ function enableShardTest() {
     QUERY_ROUTER_IP=${HOSTMAP["mongos1"]}
 
     echo "Test insert"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test /root/jsfiles/addDBs.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test_db /root/jsfiles/addDBs.js" htaox/mongodb-worker:latest
     sleep 5 # Wait for db to be created
     
     echo "Enable shard"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/enableSharding.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/enableSharding.js" htaox/mongodb-worker:latest
     sleep 5 # Wait sharding to be enabled
     
     echo "Test indexes"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test /root/jsfiles/addIndexes.js" htaox/mongodb-worker:3.0.2
+    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test_db /root/jsfiles/addIndexes.js" htaox/mongodb-worker:latest
 
 }
 
