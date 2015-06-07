@@ -130,7 +130,10 @@ function setupShards() {
     for j in `seq 1 $NUM_WORKERS`; do      
       #REPLICA_SETS[j]="rs${j}"
       #SHARD_MEMBERS[j]=${HOSTMAP["rs${j}_srv1"]}
-      SHARD_MEMBERS[j]="rs${j}/${HOSTMAP["rs${j}_srv1"]}"
+
+      #use @IP@ and sed later with find/replace "/"
+      #the "/" is causing docker to download an "image", is this a bug?
+      SHARD_MEMBERS[j]="rs${j}@IP@${HOSTMAP["rs${j}_srv1"]}"
     done
 
     #Only need to log into one query router

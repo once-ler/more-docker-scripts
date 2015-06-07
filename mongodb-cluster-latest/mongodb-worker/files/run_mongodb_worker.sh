@@ -18,8 +18,11 @@ if [[ ${OPTIONS} == *"addShard"* ]]; then
     #SHARD=${SHARD_MEMBERS[i-1]}
     #REPLICA_SET=${REPLICA_SETS[i-1]}
     #echo "sh.addShard(\"${REPLICA_SET}/${SHARD}:27017\");" >> /root/jsfiles/addShard.js
-      echo "sh.addShard(\"${i}:27017\");" >> /root/jsfiles/addShard.js
+
+    echo "sh.addShard(\"${i}:27017\");" >> /root/jsfiles/addShard.js
   done
+  #replace @IP@ with "/"
+  sed -i "s|@IP@|/|g" /root/jsfiles/addShard.js
   echo "Executing $(cat /root/jsfiles/addShard.js)"
 fi
 
