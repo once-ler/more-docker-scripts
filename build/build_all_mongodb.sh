@@ -2,7 +2,7 @@
 
 CURDIR=$(pwd)
 BASEDIR=$(cd $(dirname $0); pwd)"/.."
-dir_list=( "mongodb-3.0.2" )
+dir_list=( "mongodb-cluster-latest" )
 
 export IMAGE_PREFIX="htaox/"
 
