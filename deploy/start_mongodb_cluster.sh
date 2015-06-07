@@ -31,8 +31,8 @@ function createShardContainers() {
     # Create mongd servers
     for j in `seq 1 $NUM_REPLSETS`; do
       HOSTNAME=rs${i}_srv${j}
-      # WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --storageEngine wiredTiger --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:latest)
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:latest)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --storageEngine wiredTiger --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:latest)
+      #WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --notablescan --noprealloc --smallfiles" htaox/mongodb-worker:latest)
       sleep 3
       #echo "Removing $HOSTNAME from $DNSFILE"
       #sed -i "/$HOSTNAME/d" "$DNSFILE"
