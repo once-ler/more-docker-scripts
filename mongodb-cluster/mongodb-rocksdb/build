@@ -1,4 +1,4 @@
 rm -f files/files.hash
 for i in `find . -type f | sed s/"\.\/"//`; do git hash-object $i | tr -d '\n'; echo -e "\t$i"; done > /tmp/files.hash
 mv /tmp/files.hash files/files.hash
-docker build -t ${IMAGE_PREFIX}mongodb-base:latest .
+docker build -t ${IMAGE_PREFIX}mongodb-rocksdb:latest .
