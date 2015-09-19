@@ -20,9 +20,9 @@ function start_master() {
     mkdir -p "${MASTER_VOLUME_DIR}"    
 
     if [ "$DEBUG" -gt 0 ]; then
-        echo sudo docker run -d --restart no --dns $NAMESERVER_IP -h ${MASTER_HOSTNAME}${DOMAINNAME} $VOLUME_MAP $1:$2
+        echo sudo docker run -d -p 9201:9200 -p 9301:9300 --restart no --dns $NAMESERVER_IP -h ${MASTER_HOSTNAME}${DOMAINNAME} $VOLUME_MAP $1:$2
     fi
-    MASTER=$(sudo docker run -d --restart no --dns $NAMESERVER_IP -h ${MASTER_HOSTNAME}${DOMAINNAME} $VOLUME_MAP $1:$2)
+    MASTER=$(sudo docker run -d -p 9201:9200 -p 9301:9300 --restart no --dns $NAMESERVER_IP -h ${MASTER_HOSTNAME}${DOMAINNAME} $VOLUME_MAP $1:$2)
 
     if [ "$MASTER" = "" ]; then
         echo "error: could not start master container from image $1:$2"
@@ -63,9 +63,9 @@ function start_workers() {
         echo "WORKER ${i} VOLUME_MAP => ${WORKER_VOLUME_MAP}"
 
         if [ "$DEBUG" -gt 0 ]; then
-	    echo sudo docker run -d --restart no --dns $NAMESERVER_IP -h $hostname $WORKER_VOLUME_MAP $1:$2
+	    echo sudo docker run -d -p 9201:9200 -p 9301:9300 --restart no --dns $NAMESERVER_IP -h $hostname $WORKER_VOLUME_MAP $1:$2
         fi
-	WORKER=$(sudo docker run -d --restart no --dns $NAMESERVER_IP -h $hostname $WORKER_VOLUME_MAP $1:$2)
+	WORKER=$(sudo docker run -d -p 9201:9200 -p 9301:9300 --restart no --dns $NAMESERVER_IP -h $hostname $WORKER_VOLUME_MAP $1:$2)
 
         if [ "$WORKER" = "" ]; then
             echo "error: could not start worker container from image $1:$2"
