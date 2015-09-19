@@ -14,7 +14,8 @@ sed -i "s/@MASTER@/false/g" $ES_HOME/conf/elasticsearch.yml
 sed -i "s/@DATA@/true/g" $ES_HOME/conf/elasticsearch.yml
 
 #elasticsearch requires hostname loopback
-sed -i "s/127.0.0.1 localhost/127.0.0.1 localhost ${HOSTNAME}/" /etc/hosts
+sudo mungehosts -l $HOSTNAME
+cat /etc/hosts
 
 ES_HEAP_SIZE=2g
 

@@ -50,3 +50,9 @@ ADD files /root/elasticsearch_files
 ADD files/elasticsearch.yml $ES_HOME/conf/elasticsearch.yml
 
 RUN chown -R elasticsearch.elasticsearch $ES_HOME
+
+# Add mungehosts (Need to add hostname to 127.0.0.1 in /etc/hosts)
+# http://jasani.org/2014/11/19/docker-now-supports-adding-host-mappings/
+# https://github.com/hiteshjasani/nim-mungehosts
+ADD https://github.com/hiteshjasani/nim-mungehosts/releases/download/v0.1.1/mungehosts /usr/local/bin/mungehosts
+RUN chmod 755 /usr/local/bin/mungehosts
