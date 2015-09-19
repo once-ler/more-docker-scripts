@@ -6,7 +6,7 @@
  
 # Pull base image.
 #FROM htaox/oracle-java8:latest
-FROM java:oracle-java7
+FROM java:7
 
 RUN apt-get update
 RUN apt-get install sudo
