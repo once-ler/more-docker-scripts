@@ -6,7 +6,7 @@
  
 # Pull base image.
 #FROM htaox/oracle-java8:latest
-FROM java:oracle-java8
+FROM java:oracle-java7
 
 RUN apt-get update
 RUN apt-get install sudo
@@ -21,7 +21,7 @@ ENV ES_HOME /elasticsearch
 RUN /elasticsearch/bin/plugin -install mobz/elasticsearch-head
 
 # Install elasticsearch-mapper-attachment
-RUN /elasticsearch/bin/plugin -install elasticsearch/elasticsearch-mapper-attachments/2.7.0 
+RUN /elasticsearch/bin/plugin -install elasticsearch/elasticsearch-mapper-attachments/2.5.0 
 
 # Create elasticsearch user
 ENV ES_USER elasticsearch
