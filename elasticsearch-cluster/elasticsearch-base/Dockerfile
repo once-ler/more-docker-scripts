@@ -14,7 +14,7 @@ RUN apt-get update
  
 # Install ElasticSearch.
 RUN cd /tmp && wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.2.tar.gz
-RUN cd /tmp && tar xvzf elasticsearch-1.5.2.tar.gz && rm -f elasticsearch-1.7.2.tar.gz
+RUN cd /tmp && tar xvzf elasticsearch-1.7.2.tar.gz && rm -f elasticsearch-1.7.2.tar.gz
 RUN mv /tmp/elasticsearch-1.7.2 /elasticsearch
 ENV ES_HOME /elasticsearch
 
