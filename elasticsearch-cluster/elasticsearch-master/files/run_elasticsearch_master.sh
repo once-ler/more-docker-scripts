@@ -19,4 +19,5 @@ sed -i "s/@DATA@/false/g" $ES_HOME/config/elasticsearch.yml
 
 ES_HEAP_SIZE=1g
 
-sudo -u elasticsearch $ES_HOME/bin/elasticsearch -f -Des.config=$ES_HOME/config/elasticsearch.yml -Xms$ES_HEAP_SIZE -Xmx$ES_HEAP_SIZE
+#run as root
+$ES_HOME/bin/elasticsearch -f -Des.config=$ES_HOME/config/elasticsearch.yml -Xms$ES_HEAP_SIZE -Xmx$ES_HEAP_SIZE
