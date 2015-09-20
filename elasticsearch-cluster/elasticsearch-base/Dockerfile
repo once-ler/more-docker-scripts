@@ -6,7 +6,7 @@
  
 # Pull base image.
 #FROM htaox/oracle-java8:latest
-FROM java:7
+FROM java:8u45-jdk
 
 RUN apt-get update
 RUN apt-get install sudo
@@ -47,7 +47,7 @@ EXPOSE 9200
 EXPOSE 9300
 
 ADD files /root/elasticsearch_files
-ADD files/elasticsearch.yml $ES_HOME/conf/elasticsearch.yml
+ADD files/elasticsearch.yml $ES_HOME/config/elasticsearch.yml
 
 RUN chown -R elasticsearch.elasticsearch $ES_HOME
 
