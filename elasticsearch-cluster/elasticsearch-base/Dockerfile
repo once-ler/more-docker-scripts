@@ -35,22 +35,20 @@ RUN /elasticsearch/bin/plugin -install elasticsearch/elasticsearch-mapper-attach
 # Define mountable directories.
 VOLUME ["/data"]
 
-# Define working directory.
-WORKDIR /data
-
 # Define default command.
 # ENTRYPOINT ["/elasticsearch/bin/elasticsearch"]
+
+ADD files /root/elasticsearch_files
+ADD files/elasticsearch.yml $ES_HOME/config/elasticsearch.yml
+
+# Define working directory.
+WORKDIR /data
 
 # Expose ports.
 #   - 9200: HTTP
 #   - 9300: transport
 EXPOSE 9200
 EXPOSE 9300
-
-ADD files /root/elasticsearch_files
-ADD files/elasticsearch.yml $ES_HOME/config/elasticsearch.yml
-
-RUN chown -R elasticsearch.elasticsearch $ES_HOME
 
 # Add mungehosts (Need to add hostname to 127.0.0.1 in /etc/hosts)
 # http://jasani.org/2014/11/19/docker-now-supports-adding-host-mappings/
