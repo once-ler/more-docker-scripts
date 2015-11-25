@@ -18,13 +18,11 @@ RUN cd /tmp && tar xvzf elasticsearch-1.7.2.tar.gz && rm -f elasticsearch-1.7.2.
 RUN mv /tmp/elasticsearch-1.7.2 /elasticsearch
 ENV ES_HOME /elasticsearch
 
-# Create elasticsearch user
-# ENV ES_USER elasticsearch
-# ENV ES_GROUP elasticsearch
+# Install elasticsearch-head
+RUN /elasticsearch/bin/plugin -install mobz/elasticsearch-head
 
-# RUN addgroup elasticsearch
-# RUN useradd elasticsearch -g elasticsearch
-## RUN adduser --ingroup elasticsearch elasticsearch
+# Install elasticsearch-mapper-attachment
+RUN /elasticsearch/bin/plugin -install elasticsearch/elasticsearch-mapper-attachments/2.7.0 
 
 # Define mountable directories.
 VOLUME ["/data"]
@@ -37,12 +35,6 @@ ADD files/elasticsearch.yml $ES_HOME/config/elasticsearch.yml
 
 # Define working directory.
 WORKDIR /data
-
-# Install elasticsearch-head
-RUN /elasticsearch/bin/plugin -install mobz/elasticsearch-head
-
-# Install elasticsearch-mapper-attachment
-RUN /elasticsearch/bin/plugin -install elasticsearch/elasticsearch-mapper-attachments/2.7.0 
 
 # Move the plugins to the data directory
 RUN mv /elasticsearch/plugins /data
