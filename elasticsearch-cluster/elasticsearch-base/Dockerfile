@@ -36,9 +36,6 @@ ADD files/elasticsearch.yml $ES_HOME/config/elasticsearch.yml
 # Define working directory.
 WORKDIR /data
 
-# Move the plugins to the data directory
-RUN mv /elasticsearch/plugins /data
-
 # Expose ports.
 #   - 9200: HTTP
 #   - 9300: transport
