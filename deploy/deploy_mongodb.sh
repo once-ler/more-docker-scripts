@@ -3,7 +3,7 @@
 DEBUG=0
 BASEDIR=$(cd $(dirname $0); pwd)
 
-mongodb_images=( "htaox/mongodb-base:3.0.2","htaox/mongodb-worker:3.0.2" )
+mongodb_images=( "htaox/mongodb-base:latest","htaox/mongodb-worker:latest" )
 NAMESERVER_IMAGE="amplab/dnsmasq-precise"
 
 start_shell=0
