@@ -17,7 +17,7 @@ sed -i "s/@DATA@/false/g" $ES_HOME/config/elasticsearch.yml
 #sudo mungehosts -l $HOSTNAME
 #cat /etc/hosts
 
-ES_HEAP_SIZE=1g
+ES_HEAP_SIZE=2g
 
 #run as root
 $ES_HOME/bin/elasticsearch -f -Des.config=$ES_HOME/config/elasticsearch.yml -Xms$ES_HEAP_SIZE -Xmx$ES_HEAP_SIZE
