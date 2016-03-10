@@ -381,3 +381,26 @@ network.host: @IP@
 #monitor.jvm.gc.old.warn: 10s
 #monitor.jvm.gc.old.info: 5s
 #monitor.jvm.gc.old.debug: 2s
+
+# invaluable advice: https://www.loggly.com/blog/nine-tips-configuring-elasticsearch-for-high-performance/
+
+#prevent curl -XDELETE ‘http://localhost:9200/*/’
+action.disable_delete_all_indices: true
+#lower data cache to increase faster facet search
+indices.fielddata.cache.size: 25%
+#optimize index request
+indices.cluster.send_refresh_mapping: false
+#meaning that at any point in time only 2 shards are allowed to be moving
+cluster.routing.allocation.cluster_concurrent_rebalance:2
+#The low watermark dictates the disk usage point that which ES won’t allocate new shards. In the example below, ES stops allocating shards for a node once disk usage reaches 97%.
+#The high watermark dedicates the disk usage value at which the shards will start moving out of the node (99%)
+cluster.routing.allocation.disk.threshold_enabled:true
+cluster.routing.allocation.disk.watermark.low:.97
+cluster.routing.allocation.disk.watermark.high:.99
+#Recovery Properties Allow for Faster Restart Times
+cluster.routing.allocation.node_concurrent_recoveries:4
+cluster.routing.allocation.node_initial_primaries_recoveries:18
+indices.recovery.concurrent_streams: 4
+indices.recovery.max_bytes_per_sec: 40mb
+#Threadpool Properties Prevent Data Loss
+threadpool.bulk.queue_size: 3000
