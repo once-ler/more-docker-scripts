@@ -404,3 +404,10 @@ indices.recovery.concurrent_streams: 4
 indices.recovery.max_bytes_per_sec: 40mb
 #Threadpool Properties Prevent Data Loss
 threadpool.bulk.queue_size: 3000
+
+#enable cors
+http.cors.enabled : true  
+http.cors.allow-origin : "*"
+http.cors.allow-methods : OPTIONS, HEAD, GET, POST, PUT, DELETE
+http.cors.allow-headers : X-Requested-With,X-Auth-Token,Content-Type, Content-Length
+
