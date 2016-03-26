@@ -413,5 +413,5 @@ http.cors.allow-headers: X-Requested-With,X-Auth-Token,Content-Type, Content-Len
 
 #avoid split-brain ref: http://blog.trifork.com/2013/10/24/how-to-avoid-the-split-brain-problem-in-elasticsearch/
 #for 9 node cluster where 8 data nodes: q => 8/2 + 1 = 5 
-discovery.zen.minimum_master_nodes: 5
-discovery.zen.ping.timeout: 5s
+#discovery.zen.minimum_master_nodes: 2
+#discovery.zen.ping.timeout: 5s
