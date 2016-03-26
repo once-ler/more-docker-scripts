@@ -6,7 +6,7 @@
  
 # Pull base image.
 #FROM htaox/oracle-java8:latest
-FROM java:8u45-jdk
+FROM java:8u72-jdk
 
 RUN apt-get update
 # just run as root
