@@ -37,7 +37,7 @@ function print_help() {
 }
 
 function parse_options() {
-    while getopts "i:w:cv:h:s:q:" opt; do
+    while getopts "i:w:cv:s:q:h" opt; do
         case $opt in
         i)
             echo "$OPTARG" | grep "mongodb:" > /dev/null;
