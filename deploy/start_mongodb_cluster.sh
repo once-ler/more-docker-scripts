@@ -30,7 +30,7 @@ function createShardContainers() {
     for j in `seq 1 $NUM_REPLSETS`; do
       HOSTNAME=rs${i}_srv${j}
       # use wiredTiger as storageEngine
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan" htaox/mongodb-worker:latest)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
       sleep 3
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
       echo "$HOSTNAME IP: $WORKER_IP"

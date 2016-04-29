@@ -41,10 +41,10 @@ function parse_options() {
         case $opt in
         i)
             echo "$OPTARG" | grep "mongodb:" > /dev/null;
-	    if [ "$?" -eq 0 ]; then
+    	    if [ "$?" -eq 0 ]; then
                 image_type="mongodb"
             fi            
-	    image_name=$(echo "$OPTARG" | awk -F ":" '{print $1}')
+    	    image_name=$(echo "$OPTARG" | awk -F ":" '{print $1}')
             image_version=$(echo "$OPTARG" | awk -F ":" '{print $2}') 
           ;;
         w)
