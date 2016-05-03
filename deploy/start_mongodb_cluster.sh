@@ -110,11 +110,11 @@ function setupReplicaSets() {
 
   # used passed in arg or global var
   WORK=$NUM_WORKERS
-  [[ -z "${2// }" ]] && WORK=$2
+  [[ ! -z "${1// }" ]] && WORK=$1
   REPL=$NUM_REPLSETS
-  [[ -z "${2// }" ]] && REPL=$2
+  [[ ! -z "${2// }" ]] && REPL=$2
   PRX=rs
-  [[ -z "${3// }" ]] && PRX=$3
+  [[ ! -z "${3// }" ]] && PRX=$3
 
   for i in `seq 1 $WORK`; do
     echo "Initiating Replicat Sets"
