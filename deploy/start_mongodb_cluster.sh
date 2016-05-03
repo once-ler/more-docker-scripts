@@ -22,7 +22,8 @@ function createShardContainers() {
       WORKER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-${i}"      
       for j in `seq 1 $NUM_REPLSETS`; do
         echo "Creating directory ${WORKER_VOLUME_DIR}-${j}"
-        mkdir -p "${WORKER_VOLUME_DIR}-${j}"    
+        mkdir -p "${WORKER_VOLUME_DIR}-${j}"
+        mkdir -p "${WORKER_VOLUME_DIR}-${j}/log"    
       done      
     fi
     
@@ -30,7 +31,7 @@ function createShardContainers() {
     for j in `seq 1 $NUM_REPLSETS`; do
       HOSTNAME=rs${i}_srv${j}
       # use wiredTiger as storageEngine
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -v ${WORKER_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="d --replSet rs${i} --dbpath /data/db --logpath /data/log --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
       sleep 3
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
       echo "$HOSTNAME IP: $WORKER_IP"
@@ -73,16 +74,19 @@ function createConfigContainersDeprecated() {
 } )
 '
 function createConfigContainers() {
+
   #should have exactly *3* for production
-  for i in `seq 1 3`; do
-    CONFIG_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-${i}"
-    mkdir -p "${CONFIG_VOLUME_DIR}-cfg"
+  for i in `seq 1 1`; do
+    echo "starting cfg container"
+
+    CONFIG_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-cfg-${i}"    
     
     # Create mongd servers
-    for j in `seq 1 $NUM_REPLSETS`; do
-      HOSTNAME=rs${i}_srv${j}
+    for j in `seq 1 3`; do
+      mkdir -p "${CONFIG_VOLUME_DIR}-${j}"
+      HOSTNAME=cfg${i}_srv${j}
       # use wiredTiger as storageEngine
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -e OPTIONS="d --replSet rs${i} --dbpath /data/db --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${WORKER_VOLUME_DIR}-${j}:/data/db -v ${WORKER_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="d --configsvr --replSet cfg${i} --dbpath /data/db --logpath /data/log --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
       sleep 3
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
       echo "$HOSTNAME IP: $WORKER_IP"
@@ -99,25 +103,27 @@ function createConfigContainers() {
 }
 
 function setupReplicaSets() {
+  #unset arrays
+  unset $REPLICA_MEMBERS;
 
   # used passed in arg or global var
-  NUM=$NUM_WORKERS
-  [[ -z "${1// }" ]] && NUM=$1
+  WORK=$NUM_WORKERS
+  [[ -z "${2// }" ]] && WORK=$2
+  REPL=$NUM_REPLSETS
+  [[ -z "${2// }" ]] && REPL=$2
   PRX=rs
-  [[ -z "${2// }" ]] && PRX=$2
+  [[ -z "${3// }" ]] && PRX=$3
 
-  for i in `seq 1 $NUM_WORKERS`; do
-
+  for i in `seq 1 $WORK`; do
     echo "Initiating Replicat Sets"
     #yes, _srv1 is correct
     docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:latest
     sleep 5
-
   done
 
-  for i in `seq 1 $NUM_WORKERS`; do
+  for i in `seq 1 $WORK`; do
     #form array, start with *_srv2* and up
-    for j in `seq 2 $NUM_REPLSETS`; do
+    for j in `seq 2 $REPL`; do
       REPLICA_MEMBERS[j]=${HOSTMAP["${PRX}${i}_srv${j}"]}
     done
 
@@ -127,7 +133,7 @@ function setupReplicaSets() {
     sleep 5
   done
 
-  for i in `seq 1 $NUM_WORKERS`; do
+  for i in `seq 1 $WORK`; do
     echo "Setting Replicat Sets"
     #yes, _srv1 is correct
     docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["${PRX}${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:latest
@@ -137,10 +143,11 @@ function setupReplicaSets() {
 
 function createQueryRouterContainers() {
   # Setup and configure mongo router
-  CONFIG_DBS=""
+  # mongos --configdb configReplSet/<cfgsvr1:port1>,<cfgsvr2:port2>,<cfgsvr3:port3>
+  CONFIG_DBS="cfg1/"
   for i in `seq 1 3`; do
     #use the IP, not the HOSTNAME
-    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[mgs_cfg${i}]}:27017"
+    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[cfg1_srv${i}]}:27017"
     if [ $i -lt 3 ]; then
       CONFIG_DBS="${CONFIG_DBS},"
     fi
@@ -148,10 +155,12 @@ function createQueryRouterContainers() {
 
   echo "CONFIG DBS => ${CONFIG_DBS}"
 
+  ROUTER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-mongos"
   for j in `seq 1 $NUM_QUERY_ROUTERS`; do
+    mkdir -p "${ROUTER_VOLUME_DIR}-${j}"
     # Actually running mongos --configdb ...
     HOSTNAME=mongos${j}
-    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -e OPTIONS="s --configdb ${CONFIG_DBS} --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false --port 27017" htaox/mongodb-worker:latest)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -v ${ROUTER_VOLUME_DIR}-${j}:/data/db -v ${ROUTER_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="s --configdb ${CONFIG_DBS} --dbpath /data/db --logpath /data/log --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false --port 27017" htaox/mongodb-worker:latest)
     sleep 5 # Wait for mongo to start
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "$HOSTNAME IP: $WORKER_IP"
@@ -161,7 +170,6 @@ function createQueryRouterContainers() {
 }
 
 function setupShards() {
-
   #for i in `seq 1 $NUM_QUERY_ROUTERS`; do
 
   # *_srv1* is correct
@@ -197,14 +205,16 @@ function updateDNSFile() {
   done
 
   #Config containers
-  for i in `seq 1 3`; do
-    HOSTNAME=mgs_cfg${i}
-    echo "Removing $HOSTNAME from $DNSFILE"
-    sed -i "/$HOSTNAME/d" "$DNSFILE"
+  for i in `seq 1 1`; do
+    for j in `seq 1 3`; do
+      HOSTNAME=cfg${i}_srv${j}
+      echo "Removing $HOSTNAME from $DNSFILE"
+      sed -i "/$HOSTNAME/d" "$DNSFILE"
 
-    WORKER_IP=${HOSTMAP[mgs_cfg${i}]}
-    echo "Updating $HOSTNAME in $DNSFILE to $WORKER_IP"
-    echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
+      WORKER_IP=${HOSTMAP["cfg${i}_srv${j}"]}
+      echo "Updating $HOSTNAME in $DNSFILE to $WORKER_IP"
+      echo "address=\"/$HOSTNAME/$WORKER_IP\"" >> $DNSFILE
+    done
   done
   
   #Query containers
@@ -259,7 +269,12 @@ function start_workers() {
   createConfigContainers
 
   echo "-------------------------------------"
-  echo "Setting Up Replica Sets"
+  echo "Setting Up Replica Sets for Config"
+  echo "-------------------------------------"
+  setupReplicaSets 1 3 cfg
+  
+  echo "-------------------------------------"
+  echo "Setting Up Replica Sets for Shards"
   echo "-------------------------------------"
   setupReplicaSets
   
