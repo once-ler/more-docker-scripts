@@ -32,7 +32,7 @@ function createShardContainers() {
     for j in `seq 1 $NUM_REPLSETS`; do
       HOSTNAME=rs${i}_srv${j}
       # use wiredTiger as storageEngine
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 570${i}${j}:27017 -p 580${1}${j}:27018 -v ${WORKER_VOLUME_DIR}-${j}:/data/db -v ${WORKER_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="d --replSet rs${i} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false --port 27017" htaox/mongodb-worker:latest)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 570${i}${j}:27017 -p 580${i}${j}:27018 -v ${WORKER_VOLUME_DIR}-${j}:/data/db -v ${WORKER_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="d --replSet rs${i} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false --port 27017" htaox/mongodb-worker:latest)
       sleep 3
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
       echo "$HOSTNAME IP: $WORKER_IP"
