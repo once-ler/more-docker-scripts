@@ -110,7 +110,9 @@ function createConfigContainers() {
 
 function setupReplicaSets() {
   #unset REPLICA_MEMBERS
-  for ((i=0; i<3; i++)); do unset REPLICA_MEMBERS[$i]; done
+  # for ((i=0; i<3; i++)); do unset REPLICA_MEMBERS[$i]; done
+  # explicitly unset 3rd member if found
+  unset REPLICA_MEMBERS[2];
 
   # used passed in arg or global var
   WORK=$NUM_WORKERS
