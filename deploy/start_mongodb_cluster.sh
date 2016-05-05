@@ -337,10 +337,10 @@ function start_workers() {
   
   echo "-------------------------------------"
   echo "POST INSTALL TASKS"
+  echo "exported to ${BASEDIR}/POST_INSTALL_TASKS"
   echo "-------------------------------------"
-  printf $POST_INSTALL
-  printf "\n"  
-
+  echo $POST_INSTALL > ${BASEDIR}/POST_INSTALL_TASKS
+  
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
   echo "Connect to cluster by: ${ROUTERS[@]}"
