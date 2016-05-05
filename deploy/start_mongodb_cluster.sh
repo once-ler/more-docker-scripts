@@ -109,8 +109,8 @@ function createConfigContainers() {
 }
 
 function setupReplicaSets() {
-  #unset arrays
-  unset $REPLICA_MEMBERS;
+  #unset REPLICA_MEMBERS
+  for ((i=0; i<3; i++)); do unset REPLICA_MEMBERS[$i]; done
 
   # used passed in arg or global var
   WORK=$NUM_WORKERS
@@ -151,6 +151,7 @@ function setupReplicaSets() {
 
 # use 3701X and 3801X for ports
 # should be lightweight, no need for replsets
+# mongos --configdb cfg1/172.17.1.95:27017,172.17.1.96:27017,172.17.1.97:27017 --port 27017
 function createQueryRouterContainers() {
   # Setup and configure mongo router
   # mongos --configdb configReplSet/<cfgsvr1:port1>,<cfgsvr2:port2>,<cfgsvr3:port3>
@@ -168,12 +169,9 @@ function createQueryRouterContainers() {
 
   ROUTER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-mongos"
   for j in `seq 1 $NUM_QUERY_ROUTERS`; do
-    echo "Creating directory ${ROUTER_VOLUME_DIR}-${j}"
-    mkdir -p "${ROUTER_VOLUME_DIR}-${j}"
-    mkdir -p "${ROUTER_VOLUME_DIR}-${j}/log"
     # Actually running mongos --configdb ...
     HOSTNAME=mongos${j}
-    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 3701${j}:27017 -p 3801${j}:27018 -e OPTIONS="s --configdb ${CONFIG_DBS} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 1 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false --port 27017" htaox/mongodb-worker:latest)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 3701${j}:27017 -p 3801${j}:27018 -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:latest)
     sleep 5 # Wait for mongo to start
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "$HOSTNAME IP: $WORKER_IP"
