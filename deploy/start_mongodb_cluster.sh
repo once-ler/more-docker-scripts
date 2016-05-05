@@ -124,10 +124,10 @@ function setupReplicaSets() {
   [[ ! -z "${3// }" ]] && PRX=$3
 
   for i in `seq 1 $WORK`; do
-    echo "Initiating Replicat Sets"
+    echo "Initiating Replicat Sets ${HOSTMAP["${PRX}${i}_srv1"]}"
     #yes, _srv1 is correct
     docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:latest
-    sleep 5
+    sleep 20
   done
 
   for i in `seq 1 $WORK`; do
@@ -141,7 +141,7 @@ function setupReplicaSets() {
     echo "Setting Replicat Sets (setupReplicaSet.js)"
     #yes, _srv1 is correct
     docker run --dns $NAMESERVER_IP -P -i -t -e REPLICAS="${REPLICAS_MEMBERS_STRING}" -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:latest
-    sleep 5
+    sleep 15
   done
 
   for i in `seq 1 $WORK`; do
@@ -199,7 +199,7 @@ function setupShards() {
   QUERY_ROUTER_IP=${HOSTMAP["mongos1"]}
   echo "Initiating Shards ${SHARD_MEMBERS[@]} for Router ${QUERY_ROUTER_IP}"
   docker run --dns $NAMESERVER_IP -P -i -t -e SHARDS="${SHARD_MEMBERS}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
-  sleep 5 # Wait for sharding to be enabled
+  sleep 15 # Wait for sharding to be enabled
 
   #done
 }
@@ -323,7 +323,7 @@ function start_workers() {
   echo "Enable Shard Test"
   echo "-------------------------------------"
   enableShardTest
-
+  
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
   echo "Connect to cluster by: ${ROUTERS[@]}"
