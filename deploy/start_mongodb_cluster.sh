@@ -5,6 +5,8 @@
 
 BASEDIR=$(cd $(dirname $0); pwd)
 
+POST_INSTALL=''
+
 declare -A HOSTMAP
 
 # use 570XX and 580XX for ports
@@ -124,31 +126,37 @@ function setupReplicaSets() {
   [[ ! -z "${3// }" ]] && PRX=$3
 
   for i in `seq 1 $WORK`; do
-    echo "Initiating Replicat Sets ${HOSTMAP["${PRX}${i}_srv1"]}"
+    #echo "Initiating Replicat Sets ${HOSTMAP["${PRX}${i}_srv1"]}"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:latest
-    sleep 20
+    #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:latest
+    #sleep 10
+    POSTINSTALL+="Initiate replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and then run => rs.initiate()\n"
   done
 
   for i in `seq 1 $WORK`; do
+    POSTINSTALL+="Add secondary nodes to primary for replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and run:\n"
     #form array, start with *_srv2* and up
     for j in `seq 2 $REPL`; do
-      REPLICA_MEMBERS[j]=${HOSTMAP["${PRX}${i}_srv${j}"]}
+      #REPLICA_MEMBERS[j]=${HOSTMAP["${PRX}${i}_srv${j}"]}
+      POSTINSTALL+="rs.add("${HOSTMAP["${PRX}${i}_srv${j}"]}")"
     done
 
-    REPLICAS_MEMBERS_STRING="${REPLICA_MEMBERS[@]}"
-    
-    echo "Setting Replicat Sets (setupReplicaSet.js)"
+    #REPLICAS_MEMBERS_STRING="${REPLICA_MEMBERS[@]}"
+    #echo "Setting Replicat Sets (setupReplicaSet.js)"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e REPLICAS="${REPLICAS_MEMBERS_STRING}" -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:latest
-    sleep 15
+    #docker run --dns $NAMESERVER_IP -P -i -t -e REPLICAS="${REPLICAS_MEMBERS_STRING}" -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/setupReplicaSet.js" htaox/mongodb-worker:latest
+    #sleep 5
   done
 
   for i in `seq 1 $WORK`; do
-    echo "Setting Replicat Sets (reconfigure.js)"
+    #echo "Setting Replicat Sets (reconfigure.js)"
     #yes, _srv1 is correct
-    docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["${PRX}${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:latest
-    sleep 5
+    #docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["${PRX}${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:latest
+    #sleep 5
+    POSTINSTALL+="Reconfigure primary for replica set ${PRX} => ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local:\n"
+    POSTINSTALL+="cfg = rs.conf();\n"
+    POSTINSTALL+="cfg.members[0].host = "${HOSTMAP["${PRX}${i}_srv1"]}:27017";\n";
+    POSTINSTALL+="rs.reconfig(cfg,{force:true});\n";
   done
 }
 
@@ -186,20 +194,23 @@ function createQueryRouterContainers() {
 function setupShards() {
   #for i in `seq 1 $NUM_QUERY_ROUTERS`; do
 
+  POST_INSTALL+="Setup shards\n"
+  POST_INSTALL+="login to a mongos => mongos --host ${HOSTMAP["mongos1"]}:27017 and run the following\n"
   # *_srv1* is correct
   for j in `seq 1 $NUM_WORKERS`; do      
-    SHARD_MEMBERS[j]="rs${j}/${HOSTMAP["rs${j}_srv1"]}"
+    #SHARD_MEMBERS[j]="rs${j}/${HOSTMAP["rs${j}_srv1"]}"
+    POST_INSTALL+="sh.addShard(\"rs${j}/${HOSTMAP["rs${j}_srv1"]}:27017\");\n"
   done
 
   #Convert array to string; replace space with "@"
-  SHARD_MEMBERS="${SHARD_MEMBERS[@]}"
+  #SHARD_MEMBERS="${SHARD_MEMBERS[@]}"
   #SHARD_MEMBERS=${SHARD_MEMBERS//@/ }
 
   #Only need to log into one query router
-  QUERY_ROUTER_IP=${HOSTMAP["mongos1"]}
-  echo "Initiating Shards ${SHARD_MEMBERS[@]} for Router ${QUERY_ROUTER_IP}"
-  docker run --dns $NAMESERVER_IP -P -i -t -e SHARDS="${SHARD_MEMBERS}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
-  sleep 15 # Wait for sharding to be enabled
+  #QUERY_ROUTER_IP=${HOSTMAP["mongos1"]}
+  #echo "Initiating Shards ${SHARD_MEMBERS[@]} for Router ${QUERY_ROUTER_IP}"
+  #docker run --dns $NAMESERVER_IP -P -i -t -e SHARDS="${SHARD_MEMBERS}" -e OPTIONS=" ${QUERY_ROUTER_IP}:27017 /root/jsfiles/addShard.js" htaox/mongodb-worker:latest
+  #sleep 10 # Wait for sharding to be enabled
 
   #done
 }
@@ -256,16 +267,16 @@ function enableShardTest() {
     #Note: used seq 1, so mongos1
     QUERY_ROUTER_IP=${HOSTMAP["mongos1"]}
 
-    echo "Test insert"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test_db /root/jsfiles/addDBs.js" htaox/mongodb-worker:latest
-    sleep 5 # Wait for db to be created
+    # echo "Test insert"
+    # docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test_db /root/jsfiles/addDBs.js" htaox/mongodb-worker:latest
+    # sleep 5 # Wait for db to be created
     
-    echo "Enable shard"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/enableSharding.js" htaox/mongodb-worker:latest
-    sleep 5 # Wait sharding to be enabled
+    # echo "Enable shard"
+    # docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/admin /root/jsfiles/enableSharding.js" htaox/mongodb-worker:latest
+    # sleep 5 # Wait sharding to be enabled
     
-    echo "Test indexes"
-    docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test_db /root/jsfiles/addIndexes.js" htaox/mongodb-worker:latest
+    # echo "Test indexes"
+    # docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${QUERY_ROUTER_IP}:27017/test_db /root/jsfiles/addIndexes.js" htaox/mongodb-worker:latest
 
 }
 
