@@ -335,6 +335,12 @@ function start_workers() {
   echo "-------------------------------------"
   enableShardTest
   
+  echo "-------------------------------------"
+  echo "POST INSTALL TASKS"
+  echo "-------------------------------------"
+  echo $POST_INSTALL
+  echo "\n"  
+
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
   echo "Connect to cluster by: ${ROUTERS[@]}"
