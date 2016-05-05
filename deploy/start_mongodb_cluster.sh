@@ -130,15 +130,15 @@ function setupReplicaSets() {
     #yes, _srv1 is correct
     #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:latest
     #sleep 10
-    POSTINSTALL+="Initiate replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and then run => rs.initiate()\n"
+    POST_INSTALL+="Initiate replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and then run => rs.initiate()\n"
   done
 
   for i in `seq 1 $WORK`; do
-    POSTINSTALL+="Add secondary nodes to primary for replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and run:\n"
+    POST_INSTALL+="Add secondary nodes to primary for replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and run:\n"
     #form array, start with *_srv2* and up
     for j in `seq 2 $REPL`; do
       #REPLICA_MEMBERS[j]=${HOSTMAP["${PRX}${i}_srv${j}"]}
-      POSTINSTALL+="rs.add("${HOSTMAP["${PRX}${i}_srv${j}"]}")"
+      POST_INSTALL+="rs.add("${HOSTMAP["${PRX}${i}_srv${j}"]}")"
     done
 
     #REPLICAS_MEMBERS_STRING="${REPLICA_MEMBERS[@]}"
@@ -153,10 +153,10 @@ function setupReplicaSets() {
     #yes, _srv1 is correct
     #docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["${PRX}${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:latest
     #sleep 5
-    POSTINSTALL+="Reconfigure primary for replica set ${PRX} => ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local:\n"
-    POSTINSTALL+="cfg = rs.conf();\n"
-    POSTINSTALL+="cfg.members[0].host = "${HOSTMAP["${PRX}${i}_srv1"]}:27017";\n";
-    POSTINSTALL+="rs.reconfig(cfg,{force:true});\n";
+    POST_INSTALL+="Reconfigure primary for replica set ${PRX} => ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local:\n"
+    POST_INSTALL+="cfg = rs.conf();\n"
+    POST_INSTALL+="cfg.members[0].host = "${HOSTMAP["${PRX}${i}_srv1"]}:27017";\n";
+    POST_INSTALL+="rs.reconfig(cfg,{force:true});\n";
   done
 }
 
@@ -338,8 +338,8 @@ function start_workers() {
   echo "-------------------------------------"
   echo "POST INSTALL TASKS"
   echo "-------------------------------------"
-  echo $POST_INSTALL
-  echo "\n"  
+  printf $POST_INSTALL
+  printf "\n"  
 
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"
