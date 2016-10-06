@@ -1,1 +1,3 @@
 files.hash
+**/POST_INSTALL_TASKS
+*.log

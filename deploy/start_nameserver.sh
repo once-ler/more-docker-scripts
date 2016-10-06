@@ -11,12 +11,12 @@ function start_nameserver() {
     DNSDIR="/opt/docker-dns/dnsdir_$RANDOM"
     #DNSDIR="${BASEDIR}"
     DNSFILE="${DNSDIR}/0hosts"
-    sudo mkdir -p $DNSDIR
+    sudo mkdir -p $DNSDIR 2>&1 | tee $LOG
 
-    sudo rm -rf /opt/docker-dns/DNSMASQ
-    sudo touch /opt/docker-dns/DNSMASQ
-    echo $DNSFILE | sudo tee --append /opt/docker-dns/DNSMASQ
-    sudo chmod 777 /opt/docker-dns/DNSMASQ 
+    sudo rm -rf /opt/docker-dns/DNSMASQ >> $LOG 2>&1
+    sudo touch /opt/docker-dns/DNSMASQ >> $LOG 2>&1
+    echo $DNSFILE | sudo tee --append /opt/docker-dns/DNSMASQ >> $LOG 2>&1
+    sudo chmod 777 /opt/docker-dns/DNSMASQ >> $LOG 2>&1
 
     echo "starting nameserver container"
     if [ "$DEBUG" -gt 0 ]; then
@@ -24,7 +24,7 @@ function start_nameserver() {
     fi
     NAMESERVER=$(sudo docker run -d --restart always -h nameserver${DOMAINNAME} -v $DNSDIR:/etc/dnsmasq.d $1)
 
-    if [ "$NAMESERVER" = "" ]; then
+    if [ "$NAMESERVER" = "" ] && [ "$DEBUG" = "0" ]; then
         echo "error: could not start nameserver container from image $1"
         exit 1
     fi
@@ -33,7 +33,7 @@ function start_nameserver() {
     echo "DNS host->IP file mapped:      $DNSFILE"
     sleep 2
 
-    sudo chmod -R 777 $DNSDIR
+    sudo chmod -R 777 $DNSDIR >> $LOG 2>&1
 
     NAMESERVER_IP=$(sudo docker logs $NAMESERVER 2>&1 | egrep '^NAMESERVER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "NAMESERVER_IP:                 $NAMESERVER_IP"
@@ -47,14 +47,15 @@ function check_hostname() {
     local __resultvar=$1
     local val_hostname=$2
     local val_expected_ip=$3
+    if [ "$NAMESERVER_IP" = "" ]; NAMESERVER_IP="127.0.0.1"
     if which dig >/dev/null; then
         DNSCMD="dig $val_hostname @${NAMESERVER_IP} | grep ANSWER -A1 | grep $val_expected_ip > /dev/null"
     else
         DNSCMD="nslookup $val_hostname $NAMESERVER_IP | grep Address | tail -n 1 | grep $val_expected_ip > /dev/null"
     fi
-    #echo "DNSCMD: $DNSCMD"
-    eval $DNSCMD
-    eval $__resultvar=$?
+    echo "DNSCMD: $DNSCMD" >> $LOG 2>&1
+    eval $DNSCMD >> $LOG 2>&1
+    eval $__resultvar=$? >> $LOG 2>&1
 }
 
 # contact nameserver container and resolve IP address

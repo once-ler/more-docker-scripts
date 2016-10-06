@@ -1,6 +1,12 @@
 #!/bin/bash
 
-DEBUG=0
+DATE=`date +%Y-%m-%d`
+DATETIME=`date +%Y-%m-%dT%H_%M_%S`
+LOG="deploy_mongodb_${DATE}.log"
+LOGX="deploy_mongodb_${DATETIME}.log"
+touch $LOG
+
+DEBUG=1
 BASEDIR=$(cd $(dirname $0); pwd)
 
 mongodb_images=( "htaox/mongodb-base:latest","htaox/mongodb-worker:latest" )
