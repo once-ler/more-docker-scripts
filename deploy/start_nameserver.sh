@@ -36,6 +36,7 @@ function start_nameserver() {
     chmod -R 777 $DNSDIR >> $LOG 2>&1
 
     NAMESERVER_IP=$(sudo docker logs $NAMESERVER 2>&1 | egrep '^NAMESERVER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
+    if [ -z "$NAMESERVER_IP" ]; then NAMESERVER_IP="10.10.10.0"; fi
     echo "NAMESERVER_IP:                 $NAMESERVER_IP"
     echo "address=\"/nameserver/$NAMESERVER_IP\"" > $DNSFILE
 
@@ -47,7 +48,7 @@ function check_hostname() {
     local __resultvar=$1
     local val_hostname=$2
     local val_expected_ip=$3
-    if [ "$NAMESERVER_IP" = "" ]; then NAMESERVER_IP="127.0.0.1" ; fi
+    if [ "$NAMESERVER_IP" = "" ]; then NAMESERVER_IP="10.10.10.0" ; fi
     if which dig >/dev/null; then
         DNSCMD="dig $val_hostname @${NAMESERVER_IP} | grep ANSWER -A1 | grep $val_expected_ip > /dev/null"
     else
@@ -84,7 +85,7 @@ function wait_for_nameserver {
         echo -n "."
         attempt=$((attempt+1))
         sleep 1
-        if [ "$attempt" -gt 1 ]; then break ; fi
+        if [ "$attempt" -gt 0 ]; then break ; fi
         check_hostname result nameserver "$NAMESERVER_IP"        
     done
     echo ""

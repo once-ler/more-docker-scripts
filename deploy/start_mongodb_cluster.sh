@@ -7,6 +7,8 @@ BASEDIR=$(cd $(dirname $0); pwd)
 
 POST_INSTALL=''
 
+IP_COUNTER=$((10))
+
 declare -A HOSTMAP
 
 # use 570XX and 580XX for ports
@@ -26,7 +28,7 @@ function createShardContainers() {
       for j in `seq 1 $NUM_REPLSETS`; do
         echo "Creating directory ${WORKER_VOLUME_DIR}-${j}"
         mkdir -p "${WORKER_VOLUME_DIR}-${j}"
-        mkdir -p "${WORKER_VOLUME_DIR}-${j}/log"    
+        mkdir -p "${WORKER_VOLUME_DIR}-${j}/log"
       done      
     fi
     
@@ -37,8 +39,15 @@ function createShardContainers() {
       WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 570${i}${j}:27017 -p 580${i}${j}:27018 -v ${WORKER_VOLUME_DIR}-${j}:/data/db -v ${WORKER_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="d --replSet rs${i} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false --port 27017" htaox/mongodb-worker:latest)
       sleep 3
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
+      if [ -z "$WORKER_IP" ]; then WORKER_IP="10.10.10.$IP_COUNTER"; IP_COUNTER=$((IP_COUNTER+1)); fi
       echo "$HOSTNAME IP: $WORKER_IP"
       HOSTMAP[$HOSTNAME]=$WORKER_IP
+
+      # Write out mongod config file
+      cfg=$(<$BASEDIR/../mongodb-cluster/mongodb-base/shard.cfg)
+      # cfg=$(cat $cfg | sed 's/@IP/$WORKER_IP/')
+      echo -e "$cfg" > "${WORKER_VOLUME_DIR}-${j}/mongod.cfg"
+
     done
    
   done
@@ -97,6 +106,7 @@ function createConfigContainers() {
       WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 470${i}${j}:27017 -p 480${i}${j}:27018 -v ${CONFIG_VOLUME_DIR}-${j}:/data/db -v ${CONFIG_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="d --port 27017 --configsvr --replSet cfg${i} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
       sleep 3
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
+      if [ -z "$WORKER_IP" ]; then WORKER_IP="10.10.10.$IP_COUNTER"; IP_COUNTER=$((IP_COUNTER+1)); fi
       echo "$HOSTNAME IP: $WORKER_IP"
       HOSTMAP[$HOSTNAME]=$WORKER_IP
     done
@@ -185,6 +195,7 @@ function createQueryRouterContainers() {
     WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 3701${j}:27017 -p 3801${j}:27018 -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:latest)
     sleep 5 # Wait for mongo to start
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
+    if [ -z "$WORKER_IP" ]; then WORKER_IP="10.10.10.$IP_COUNTER"; IP_COUNTER=$((IP_COUNTER+1)); fi
     echo "$HOSTNAME IP: $WORKER_IP"
     HOSTMAP[$HOSTNAME]=$WORKER_IP
     ROUTERS[j]=$WORKER_IP
