@@ -130,15 +130,15 @@ function setupReplicaSets() {
     #yes, _srv1 is correct
     #docker run --dns $NAMESERVER_IP -P -i -t -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/initiate.js" htaox/mongodb-worker:latest
     #sleep 10
-    POST_INSTALL+="Initiate replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and then run => rs.initiate()\n"
+    POST_INSTALL="${POST_INSTALL}\nInitiate replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and then run => rs.initiate()"
   done
 
   for i in `seq 1 $WORK`; do
-    POST_INSTALL+="Add secondary nodes to primary for replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and run:\n"
+    POST_INSTALL="${POST_INSTALL}\nAdd secondary nodes to primary for replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and run:"
     #form array, start with *_srv2* and up
     for j in `seq 2 $REPL`; do
       #REPLICA_MEMBERS[j]=${HOSTMAP["${PRX}${i}_srv${j}"]}
-      POST_INSTALL+="rs.add("${HOSTMAP["${PRX}${i}_srv${j}"]}")"
+      POST_INSTALL="${POST_INSTALL}\nrs.add("${HOSTMAP["${PRX}${i}_srv${j}"]}")"
     done
 
     #REPLICAS_MEMBERS_STRING="${REPLICA_MEMBERS[@]}"
@@ -153,10 +153,10 @@ function setupReplicaSets() {
     #yes, _srv1 is correct
     #docker run --dns $NAMESERVER_IP -P -i -t -e PRIMARY_SERVER=${HOSTMAP["${PRX}${i}_srv1"]} -e OPTIONS=" ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local /root/jsfiles/reconfigure.js" htaox/mongodb-worker:latest
     #sleep 5
-    POST_INSTALL+="Reconfigure primary for replica set ${PRX} => ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local:\n"
-    POST_INSTALL+="cfg = rs.conf();\n"
-    POST_INSTALL+="cfg.members[0].host = "${HOSTMAP["${PRX}${i}_srv1"]}:27017";\n";
-    POST_INSTALL+="rs.reconfig(cfg,{force:true});\n";
+    POST_INSTALL="${POST_INSTALL}\nReconfigure primary for replica set ${PRX} => ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local:"
+    POST_INSTALL="${POST_INSTALL}\ncfg = rs.conf();"
+    POST_INSTALL="${POST_INSTALL}\ncfg.members[0].host = "${HOSTMAP["${PRX}${i}_srv1"]}:27017";";
+    POST_INSTALL="${POST_INSTALL}\nrs.reconfig(cfg,{force:true});";
   done
 }
 
@@ -194,12 +194,12 @@ function createQueryRouterContainers() {
 function setupShards() {
   #for i in `seq 1 $NUM_QUERY_ROUTERS`; do
 
-  POST_INSTALL+="Setup shards\n"
-  POST_INSTALL+="login to a mongos => mongos --host ${HOSTMAP["mongos1"]}:27017 and run the following\n"
+  POST_INSTALL="${POST_INSTALL}\nSetup shards"
+  POST_INSTALL="${POST_INSTALL}\nlogin to a mongos => mongos --host ${HOSTMAP["mongos1"]}:27017 and run the following"
   # *_srv1* is correct
   for j in `seq 1 $NUM_WORKERS`; do      
     #SHARD_MEMBERS[j]="rs${j}/${HOSTMAP["rs${j}_srv1"]}"
-    POST_INSTALL+="sh.addShard(\"rs${j}/${HOSTMAP["rs${j}_srv1"]}:27017\");\n"
+    POST_INSTALL="${POST_INSTALL}\nsh.addShard(\"rs${j}/${HOSTMAP["rs${j}_srv1"]}:27017\");"
   done
 
   #Convert array to string; replace space with "@"
@@ -339,7 +339,7 @@ function start_workers() {
   echo "POST INSTALL TASKS"
   echo "exported to ${BASEDIR}/POST_INSTALL_TASKS"
   echo "-------------------------------------"
-  echo $POST_INSTALL > ${BASEDIR}/POST_INSTALL_TASKS
+  echo -e $POST_INSTALL > ${BASEDIR}/POST_INSTALL_TASKS
   
   echo "#####################################"
   echo "MongoDB Cluster is now ready to use"

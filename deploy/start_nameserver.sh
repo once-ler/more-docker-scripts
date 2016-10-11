@@ -11,12 +11,12 @@ function start_nameserver() {
     DNSDIR="/opt/docker-dns/dnsdir_$RANDOM"
     #DNSDIR="${BASEDIR}"
     DNSFILE="${DNSDIR}/0hosts"
-    sudo mkdir -p $DNSDIR 2>&1 | tee $LOG
+    mkdir -p $DNSDIR >> $LOG 2>&1
 
-    sudo rm -rf /opt/docker-dns/DNSMASQ >> $LOG 2>&1
-    sudo touch /opt/docker-dns/DNSMASQ >> $LOG 2>&1
-    echo $DNSFILE | sudo tee --append /opt/docker-dns/DNSMASQ >> $LOG 2>&1
-    sudo chmod 777 /opt/docker-dns/DNSMASQ >> $LOG 2>&1
+    rm -rf /opt/docker-dns/DNSMASQ >> $LOG 2>&1
+    touch /opt/docker-dns/DNSMASQ >> $LOG 2>&1
+    echo $DNSFILE | tee --append /opt/docker-dns/DNSMASQ
+    chmod 777 /opt/docker-dns/DNSMASQ >> $LOG 2>&1
 
     echo "starting nameserver container"
     if [ "$DEBUG" -gt 0 ]; then
@@ -33,7 +33,7 @@ function start_nameserver() {
     echo "DNS host->IP file mapped:      $DNSFILE"
     sleep 2
 
-    sudo chmod -R 777 $DNSDIR >> $LOG 2>&1
+    chmod -R 777 $DNSDIR >> $LOG 2>&1
 
     NAMESERVER_IP=$(sudo docker logs $NAMESERVER 2>&1 | egrep '^NAMESERVER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     echo "NAMESERVER_IP:                 $NAMESERVER_IP"
@@ -47,15 +47,15 @@ function check_hostname() {
     local __resultvar=$1
     local val_hostname=$2
     local val_expected_ip=$3
-    if [ "$NAMESERVER_IP" = "" ]; NAMESERVER_IP="127.0.0.1"
+    if [ "$NAMESERVER_IP" = "" ]; then NAMESERVER_IP="127.0.0.1" ; fi
     if which dig >/dev/null; then
         DNSCMD="dig $val_hostname @${NAMESERVER_IP} | grep ANSWER -A1 | grep $val_expected_ip > /dev/null"
     else
         DNSCMD="nslookup $val_hostname $NAMESERVER_IP | grep Address | tail -n 1 | grep $val_expected_ip > /dev/null"
     fi
-    echo "DNSCMD: $DNSCMD" >> $LOG 2>&1
+    echo "DNSCMD: $DNSCMD"
     eval $DNSCMD >> $LOG 2>&1
-    eval $__resultvar=$? >> $LOG 2>&1
+    eval $__resultvar=$?
 }
 
 # contact nameserver container and resolve IP address
@@ -73,6 +73,7 @@ function resolve_hostname() {
 }
 
 function wait_for_nameserver {
+    attempt=$((0))
     echo -n "waiting for nameserver to come up "
     # Note: the original scripts assumed the nameserver resolves its own
     # hostname to 127.0.0.1
@@ -81,8 +82,10 @@ function wait_for_nameserver {
     check_hostname result nameserver "$NAMESERVER_IP"
     until [ "$result" -eq 0 ]; do
         echo -n "."
+        attempt=$((attempt+1))
         sleep 1
-        check_hostname result nameserver "$NAMESERVER_IP"
+        if [ "$attempt" -gt 1 ]; then break ; fi
+        check_hostname result nameserver "$NAMESERVER_IP"        
     done
     echo ""
 }
