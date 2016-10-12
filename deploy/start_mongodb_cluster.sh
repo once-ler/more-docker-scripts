@@ -24,19 +24,22 @@ function createShardContainers() {
     # rename $VOLUME_MAP by adding worker number as suffix if it is not empty
     WORKER_VOLUME_MAP=$VOLUME_MAP
     if [ "$VOLUME_MAP" ]; then
-      WORKER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-${i}"      
+      # WORKER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-${i}"
+      WORKER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}/rs${i}"     
       for j in `seq 1 $NUM_REPLSETS`; do
-        echo "Creating directory ${WORKER_VOLUME_DIR}-${j}"
-        mkdir -p "${WORKER_VOLUME_DIR}-${j}"
-        mkdir -p "${WORKER_VOLUME_DIR}-${j}/log"
+        WORKER_DIR="${WORKER_VOLUME_DIR}_srv${j}"
+        echo "Creating directory $WORKER_DIR"
+        mkdir -p "$WORKER_DIR/db"
+        mkdir -p "$WORKER_DIR/log"
       done      
     fi
     
-    # Create mongd servers
+    # Create mongod servers
     for j in `seq 1 $NUM_REPLSETS`; do
       HOSTNAME=rs${i}_srv${j}
+      WORKER_DIR="${WORKER_VOLUME_DIR}_srv${j}"
       # use wiredTiger as storageEngine
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 570${i}${j}:27017 -p 580${i}${j}:27018 -v ${WORKER_VOLUME_DIR}-${j}:/data/db -v ${WORKER_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="d --replSet rs${i} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false --port 27017" htaox/mongodb-worker:latest)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 570${i}${j}:27017 -p 580${i}${j}:27018 -v $WORKER_DIR/db:/data/db -v $WORKER_DIR/log:/data/log -e OPTIONS="d --replSet rs${i} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false --port 27017" htaox/mongodb-worker:latest)
       sleep 3
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
       if [ -z "$WORKER_IP" ]; then WORKER_IP="10.10.10.$IP_COUNTER"; IP_COUNTER=$((IP_COUNTER+1)); fi
@@ -45,8 +48,12 @@ function createShardContainers() {
 
       # Write out mongod config file
       cfg=$(<$BASEDIR/../mongodb-cluster/mongodb-base/shard.cfg)
-      # cfg=$(cat $cfg | sed 's/@IP/$WORKER_IP/')
-      echo -e "$cfg" > "${WORKER_VOLUME_DIR}-${j}/mongod.cfg"
+      cfg="${cfg/@IP/$WORKER_IP}"
+      cfg="${cfg/@PORT/570${i}${j}}"
+      cfg="${cfg/@DB/\/data\/mongodb\/rs${i}_srv${j}\/db}"
+      cfg="${cfg/@LOG/\/data\/mongodb\/rs${i}_srv${j}\/log}"
+      cfg="${cfg/@RS/rs${i}}"      
+      echo -e "$cfg" > "$WORKER_DIR/mongod.cfg"
 
     done
    
@@ -94,21 +101,33 @@ function createConfigContainers() {
   for i in `seq 1 1`; do
     echo "starting cfg container"
 
-    CONFIG_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-cfg-${i}"    
-    
-    # Create mongd servers
-    for j in `seq 1 3`; do
-      echo "Creating directory ${CONFIG_VOLUME_DIR}-${j}"
-      mkdir -p "${CONFIG_VOLUME_DIR}-${j}"
-      mkdir -p "${CONFIG_VOLUME_DIR}-${j}/log"
+    # CONFIG_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-cfg-${i}"
+    CONFIG_VOLUME_DIR="${VOLUME_MAP_ARR[0]}/cfg${i}"
+
+    # Create mongod servers
+    # Create 5 config servers, yes, 5.
+    for j in `seq 1 5`; do
+      CONFIG_DIR=${CONFIG_VOLUME_DIR}_srv${j}
+      echo "Creating directory $CONFIG_DIR"
+      mkdir -p "$CONFIG_DIR/db"
+      mkdir -p "$CONFIG_DIR/log"
       HOSTNAME=cfg${i}_srv${j}
       # use wiredTiger as storageEngine
-      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 470${i}${j}:27017 -p 480${i}${j}:27018 -v ${CONFIG_VOLUME_DIR}-${j}:/data/db -v ${CONFIG_VOLUME_DIR}-${j}/log:/data/log -e OPTIONS="d --port 27017 --configsvr --replSet cfg${i} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
+      WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 470${i}${j}:27017 -p 480${i}${j}:27018 -v $CONFIG_DIR/db:/data/db -v $CONFIG_DIR/log:/data/log -e OPTIONS="d --port 27017 --configsvr --replSet cfg${i} --dbpath /data/db --logpath /data/log/mongod.log --logappend --logRotate reopen --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
       sleep 3
       WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
       if [ -z "$WORKER_IP" ]; then WORKER_IP="10.10.10.$IP_COUNTER"; IP_COUNTER=$((IP_COUNTER+1)); fi
       echo "$HOSTNAME IP: $WORKER_IP"
       HOSTMAP[$HOSTNAME]=$WORKER_IP
+
+      # Write out mongod config file
+      cfg=$(<$BASEDIR/../mongodb-cluster/mongodb-base/config.cfg)
+      cfg="${cfg/@IP/$WORKER_IP}"
+      cfg="${cfg/@PORT/470${i}${j}}"
+      cfg="${cfg/@DB/$CONFIG_DIR\/db}"
+      cfg="${cfg/@LOG/$CONFIG_DIR\/log}"
+      cfg="${cfg/@RS/cfg${i}}"      
+      echo -e "$cfg" > "$CONFIG_DIR/mongod.cfg"
     done
 
     #HOSTNAME=mgs_cfg${i}
@@ -178,7 +197,7 @@ function createQueryRouterContainers() {
   # mongos --configdb configReplSet/<cfgsvr1:port1>,<cfgsvr2:port2>,<cfgsvr3:port3>
   # we're only using 1 config replica set, so hardcode cfg1
   CONFIG_DBS="cfg1/"
-  for i in `seq 1 3`; do
+  for i in `seq 1 5`; do
     #use the IP, not the HOSTNAME
     CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[cfg1_srv${i}]}:27017"
     if [ $i -lt 3 ]; then
@@ -246,7 +265,7 @@ function updateDNSFile() {
   #Config containers
   if [ $1 == "config" ] ; then
     for i in `seq 1 1`; do
-      for j in `seq 1 3`; do
+      for j in `seq 1 5`; do
         HOSTNAME=cfg${i}_srv${j}
         echo "Removing $HOSTNAME from $DNSFILE"
         sed -i "/$HOSTNAME/d" "$DNSFILE"

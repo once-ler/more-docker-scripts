@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Example usage:
+# deploy/deploy_mongodb.sh -i htaox/mongodb:latest -v /data/mongodb -w 5 -s 3 -q 2
+
 DATE=`date +%Y-%m-%d`
 DATETIME=`date +%Y-%m-%dT%H_%M_%S`
 LOG="deploy_mongodb_${DATE}.log"
