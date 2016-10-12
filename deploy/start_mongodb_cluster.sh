@@ -130,6 +130,11 @@ function createConfigContainers() {
       echo -e "$cfg" > "$CONFIG_DIR/mongod.cfg"
     done
 
+    #POST_INSTALL="${POST_INSTALL}\nInitiate Config\n========================="
+    #for j in `seq 1 5`; do
+    #  POST_INSTALL="${POST_INSTALL}\n\s\s\s\s{ _id: $((j-1)), host: \"<host1>:<port1>\" }"
+    #done
+
     #HOSTNAME=mgs_cfg${i}
     #WORKER=$(docker run --dns $NAMESERVER_IP --name $HOSTNAME -P -i -d -v ${CONFIG_VOLUME_DIR}-cfg:/data/db -e OPTIONS="d --configsvr --dbpath /data/db --storageEngine wiredTiger --wiredTigerCacheSizeGB 2 --wiredTigerDirectoryForIndexes --noIndexBuildRetry --notablescan --setParameter diagnosticDataCollectionEnabled=false" htaox/mongodb-worker:latest)
     #sleep 3
@@ -140,6 +145,7 @@ function createConfigContainers() {
 }
 
 function setupReplicaSets() {
+  POST_INSTALL="${POST_INSTALL}\n=========================\nSetup Replica Sets\n========================="
   #unset REPLICA_MEMBERS
   # for ((i=0; i<3; i++)); do REPLICA_MEMBERS=(${REPLICA_MEMBERS[@]:0:$i} ${REPLICA_MEMBERS[@]:$(($i + 1))}); done
   # explicitly unset 3rd member if found
@@ -162,6 +168,7 @@ function setupReplicaSets() {
     POST_INSTALL="${POST_INSTALL}\nInitiate replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and then run => rs.initiate()"
   done
 
+  POST_INSTALL="${POST_INSTALL}\n=========================\nSecondary Nodes\n========================="
   for i in `seq 1 $WORK`; do
     POST_INSTALL="${POST_INSTALL}\nAdd secondary nodes to primary for replica set ${PRX} => mongo --host ${HOSTMAP["${PRX}${i}_srv1"]}:27017/local and run:"
     #form array, start with *_srv2* and up
@@ -177,6 +184,7 @@ function setupReplicaSets() {
     #sleep 5
   done
 
+  POST_INSTALL="${POST_INSTALL}\n=========================\nReconfigure Primary Node\n========================="
   for i in `seq 1 $WORK`; do
     #echo "Setting Replicat Sets (reconfigure.js)"
     #yes, _srv1 is correct
@@ -222,9 +230,7 @@ function createQueryRouterContainers() {
 }
 
 function setupShards() {
-  #for i in `seq 1 $NUM_QUERY_ROUTERS`; do
-
-  POST_INSTALL="${POST_INSTALL}\nSetup shards"
+  POST_INSTALL="${POST_INSTALL}\n=========================\nSetup Shards\n========================="
   POST_INSTALL="${POST_INSTALL}\nlogin to a mongos => mongos --host ${HOSTMAP["mongos1"]}:27017 and run the following"
   # *_srv1* is correct
   for j in `seq 1 $NUM_WORKERS`; do      
@@ -343,7 +349,7 @@ function start_workers() {
   echo "-------------------------------------"
   echo "Setting Up Replica Sets for Config"
   echo "-------------------------------------"
-  setupReplicaSets 1 3 cfg
+  setupReplicaSets 1 5 cfg
   
   echo "-------------------------------------"
   echo "Configuring Query Router Containers"
