@@ -50,11 +50,17 @@ function createShardContainers() {
       cfg=$(<$BASEDIR/../mongodb-cluster/mongodb-base/shard.cfg)
       cfg="${cfg/@IP/$WORKER_IP}"
       cfg="${cfg/@PORT/570${i}${j}}"
-      cfg="${cfg/@DB/\/data\/mongodb\/rs${i}_srv${j}\/db}"
-      cfg="${cfg/@LOG/\/data\/mongodb\/rs${i}_srv${j}\/log}"
-      cfg="${cfg/@RS/rs${i}}"      
+      cfg="${cfg/@DB/\/data\/mongodb\/$HOSTNAME\/db}"
+      cfg="${cfg/@LOG/\/data\/mongodb\/$HOSTNAME\/log}"
+      cfg="${cfg/@RS/rs${i}}"
+      cfg="${cfg/@PID/\/data\/mongodb\/$HOSTNAME\/$HOSTNAME.pid}"
       echo -e "$cfg" > "$WORKER_DIR/mongod.cfg"
 
+      # Write out mongod init script
+      init=$(<$BASEDIR/../mongodb-cluster/mongodb-base/mongod)
+      init="${init/@CONFIG/\/data\/mongodb\/$HOSTNAME\/mongod.cfg}"
+      init="${init/@LOCK/\/var\/lock\/subsys\/mongod-$HOSTNAME}"
+      echo -e "$init" > "$CONFIG_DIR/mongod"
     done
    
   done
@@ -126,8 +132,15 @@ function createConfigContainers() {
       cfg="${cfg/@PORT/470${i}${j}}"
       cfg="${cfg/@DB/$CONFIG_DIR\/db}"
       cfg="${cfg/@LOG/$CONFIG_DIR\/log}"
-      cfg="${cfg/@RS/cfg${i}}"      
+      cfg="${cfg/@RS/cfg${i}}"
+      cfg="${cfg/@PID/$CONFIG_DIR\/$HOSTNAME.pid}"
       echo -e "$cfg" > "$CONFIG_DIR/mongod.cfg"
+
+      # Write out mongod init script
+      init=$(<$BASEDIR/../mongodb-cluster/mongodb-base/mongod)
+      init="${init/@CONFIG/$CONFIG_DIR/mongod.cfg}"
+      init="${init/@LOCK/\/var\/lock\/subsys\/mongod-$HOSTNAME}"
+      echo -e "$init" > "$CONFIG_DIR/mongod"            
     done
 
     #POST_INSTALL="${POST_INSTALL}\nInitiate Config\n========================="
