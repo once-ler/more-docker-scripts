@@ -70,7 +70,7 @@ start()
   LOCK=@LOCK
 
   echo -n $"Starting mongod: "
-  daemon --user "$MONGO_USER" --check $mongod "$NUMACTL $mongod $OPTIONS >/dev/null 2>&1"
+  daemon --check $mongod "$NUMACTL $mongod $OPTIONS >/dev/null 2>&1"
   RETVAL=$?
   echo
   # [ $RETVAL -eq 0 ] && touch /var/lock/subsys/mongod
