@@ -59,7 +59,7 @@ function createShardContainers() {
       init=$(<$BASEDIR/../mongodb-cluster/mongodb-base/mongod)
       init="${init/@CONFIG/\/data\/mongodb\/$HOSTNAME\/mongod.cfg}"
       init="${init/@LOCK/\/var\/lock\/subsys\/mongod-$HOSTNAME}"
-      echo -e "$init" > "$WORKER_DIR/mongod"
+      echo -e "$init" > "$WORKER_DIR/mongod-$HOSTNAME"
     done
    
   done
@@ -138,7 +138,7 @@ function createConfigContainers() {
       init=$(<$BASEDIR/../mongodb-cluster/mongodb-base/mongod)
       init="${init/@CONFIG/$CONFIG_DIR/mongod.cfg}"
       init="${init/@LOCK/\/var\/lock\/subsys\/mongod-$HOSTNAME}"
-      echo -e "$init" > "$CONFIG_DIR/mongod"            
+      echo -e "$init" > "$CONFIG_DIR/mongod-$HOSTNAME"            
     done
 
     #POST_INSTALL="${POST_INSTALL}\nInitiate Config\n========================="
