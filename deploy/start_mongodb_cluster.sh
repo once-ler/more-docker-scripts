@@ -48,7 +48,6 @@ function createShardContainers() {
 
       # Write out mongod config file
       cfg=$(<$BASEDIR/../mongodb-cluster/mongodb-base/shard.cfg)
-      cfg="${cfg/@IP/$WORKER_IP}"
       cfg="${cfg/@PORT/570${i}${j}}"
       cfg="${cfg/@DB/\/data\/mongodb\/$HOSTNAME\/db}"
       cfg="${cfg/@LOG/\/data\/mongodb\/$HOSTNAME\/log}"
@@ -128,7 +127,6 @@ function createConfigContainers() {
 
       # Write out mongod config file
       cfg=$(<$BASEDIR/../mongodb-cluster/mongodb-base/config.cfg)
-      cfg="${cfg/@IP/$WORKER_IP}"
       cfg="${cfg/@PORT/470${i}${j}}"
       cfg="${cfg/@DB/$CONFIG_DIR\/db}"
       cfg="${cfg/@LOG/$CONFIG_DIR\/log}"
