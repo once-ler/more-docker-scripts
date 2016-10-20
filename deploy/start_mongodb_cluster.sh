@@ -226,8 +226,12 @@ function createQueryRouterContainers() {
 
   echo "CONFIG DBS => ${CONFIG_DBS}"
 
-  ROUTER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}-mongos"
+  ROUTER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}/mongos"
   for j in `seq 1 $NUM_QUERY_ROUTERS`; do
+    CONFIG_DIR=${ROUTER_VOLUME_DIR}_srv${j}
+    echo "Creating directory $CONFIG_DIR"
+    mkdir -p "$CONFIG_DIR/db"
+    mkdir -p "$CONFIG_DIR/log"
     # Actually running mongos --configdb ...
     HOSTNAME=mongos${j}
     WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 3701${j}:27017 -p 3801${j}:27018 -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:latest)
@@ -237,6 +241,21 @@ function createQueryRouterContainers() {
     echo "$HOSTNAME IP: $WORKER_IP"
     HOSTMAP[$HOSTNAME]=$WORKER_IP
     ROUTERS[j]=$WORKER_IP
+
+    # Write out mongod config file
+    cfg=$(<$BASEDIR/../mongodb-cluster/mongodb-base/query.cfg)
+    cfg="${cfg/@PORT/670${i}${j}}"
+    cfg="${cfg/@DB/$CONFIG_DIR\/db}"
+    cfg="${cfg/@LOG/$CONFIG_DIR\/log}"
+    cfg="${cfg/@PID/$CONFIG_DIR\/$HOSTNAME.pid}"
+    cfg="${cfg/@CONFIG/$CONFIG_DBS}"
+    echo -e "$cfg" > "$CONFIG_DIR/mongod.cfg"
+
+    # Write out mongod init script
+    init=$(<$BASEDIR/../mongodb-cluster/mongodb-base/mongod)
+    init="${init/@CONFIG/$CONFIG_DIR/mongod.cfg}"
+    init="${init/@LOCK/\/var\/lock\/subsys\/mongod-$HOSTNAME}"
+    echo -e "$init" > "$CONFIG_DIR/mongod-$HOSTNAME"
   done
 }
 
