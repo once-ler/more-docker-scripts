@@ -218,8 +218,8 @@ function createQueryRouterContainers() {
   CONFIG_DBS="cfg1/"
   for i in `seq 1 5`; do
     #use the IP, not the HOSTNAME
-    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[cfg1_srv${i}]}:27017"
-    if [ $i -lt 3 ]; then
+    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[cfg1_srv${i}]}:4701${i}"
+    if [ $i -lt 5 ]; then
       CONFIG_DBS="${CONFIG_DBS},"
     fi
   done
@@ -244,7 +244,7 @@ function createQueryRouterContainers() {
 
     # Write out mongod config file
     cfg=$(<$BASEDIR/../mongodb-cluster/mongodb-base/query.cfg)
-    cfg="${cfg/@PORT/670${i}${j}}"
+    cfg="${cfg/@PORT/3701${j}}"
     cfg="${cfg/@DB/$CONFIG_DIR\/db}"
     cfg="${cfg/@LOG/$CONFIG_DIR\/log}"
     cfg="${cfg/@PID/$CONFIG_DIR\/$HOSTNAME.pid}"
