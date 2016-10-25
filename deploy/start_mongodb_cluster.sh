@@ -252,10 +252,10 @@ function createQueryRouterContainers() {
     echo -e "$cfg" > "$CONFIG_DIR/mongod.cfg"
 
     # Write out mongod init script
-    init=$(<$BASEDIR/../mongodb-cluster/mongodb-base/mongod)
+    init=$(<$BASEDIR/../mongodb-cluster/mongodb-base/mongos)
     init="${init/@CONFIG/$CONFIG_DIR/mongod.cfg}"
     init="${init/@LOCK/\/var\/lock\/subsys\/mongod-$HOSTNAME}"
-    echo -e "$init" > "$CONFIG_DIR/mongod-$HOSTNAME"
+    echo -e "$init" > "$CONFIG_DIR/mongos-$HOSTNAME"
   done
 }
 
