@@ -233,7 +233,7 @@ function createQueryRouterContainers() {
     mkdir -p "$CONFIG_DIR/db"
     mkdir -p "$CONFIG_DIR/log"
     # Actually running mongos --configdb ...
-    HOSTNAME=mongos${j}
+    HOSTNAME=mongos_srv${j}
     WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 3701${j}:27017 -p 3801${j}:27018 -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:latest)
     sleep 5 # Wait for mongo to start
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
