@@ -215,16 +215,16 @@ function createQueryRouterContainers() {
   # Setup and configure mongo router
   # mongos --configdb configReplSet/<cfgsvr1:port1>,<cfgsvr2:port2>,<cfgsvr3:port3>
   # we're only using 1 config replica set, so hardcode cfg1
-  CONFIG_DBS="cfg1/"
+  CONFIGDBS="cfg1/"
   for i in `seq 1 5`; do
     #use the IP, not the HOSTNAME
-    CONFIG_DBS="${CONFIG_DBS}${HOSTMAP[cfg1_srv${i}]}:4701${i}"
+    CONFIGDBS="${CONFIGDBS}${HOSTMAP[cfg1_srv${i}]}:4701${i}"
     if [ $i -lt 5 ]; then
-      CONFIG_DBS="${CONFIG_DBS},"
+      CONFIGDBS="${CONFIGDBS},"
     fi
   done
 
-  echo "CONFIG DBS => ${CONFIG_DBS}"
+  echo "CONFIG DBS => ${CONFIGDBS}"
 
   ROUTER_VOLUME_DIR="${VOLUME_MAP_ARR[0]}/mongos"
   for j in `seq 1 $NUM_QUERY_ROUTERS`; do
@@ -234,7 +234,7 @@ function createQueryRouterContainers() {
     mkdir -p "$CONFIG_DIR/log"
     # Actually running mongos --configdb ...
     HOSTNAME=mongos_srv${j}
-    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 3701${j}:27017 -p 3801${j}:27018 -e OPTIONS="s --configdb ${CONFIG_DBS} --port 27017" htaox/mongodb-worker:latest)
+    WORKER=$(docker run --dns $NAMESERVER_IP --name ${HOSTNAME} -P -i -d -p 3701${j}:27017 -p 3801${j}:27018 -e OPTIONS="s --configdb ${CONFIGDBS} --port 27017" htaox/mongodb-worker:latest)
     sleep 5 # Wait for mongo to start
     WORKER_IP=$(docker logs $WORKER 2>&1 | egrep '^WORKER_IP=' | awk -F= '{print $2}' | tr -d -c "[:digit:] .")
     if [ -z "$WORKER_IP" ]; then WORKER_IP="10.10.10.$IP_COUNTER"; IP_COUNTER=$((IP_COUNTER+1)); fi
@@ -248,7 +248,7 @@ function createQueryRouterContainers() {
     cfg="${cfg/@DB/$CONFIG_DIR\/db}"
     cfg="${cfg/@LOG/$CONFIG_DIR\/log}"
     cfg="${cfg/@PID/$CONFIG_DIR\/$HOSTNAME.pid}"
-    cfg="${cfg/@CONFIG/$CONFIG_DBS}"
+    cfg="${cfg/@CONFIGDBS/$CONFIGDBS}"
     echo -e "$cfg" > "$CONFIG_DIR/mongod.cfg"
 
     # Write out mongod init script
